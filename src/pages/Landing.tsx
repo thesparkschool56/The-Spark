@@ -271,7 +271,7 @@ const Landing: React.FC = () => {
                     ) : (campuses || []).map((campus) => (
                         <Link to={`/campus/${campus?.slug}`} key={campus?.id} className="group relative h-[450px] overflow-hidden rounded-[2.5rem] cursor-pointer shadow-2xl hover:shadow-primary/20 transition-all duration-700">
                             <img
-                                src={`${campus?.image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1'}&w=800&q=80`}
+                                src="https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg="
                                 alt={campus?.name}
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 grayscale-[0.2] group-hover:grayscale-0"

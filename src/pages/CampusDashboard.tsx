@@ -34,53 +34,56 @@ const getThemeColors = (theme: string) => {
 const CAMPUS_UI_CONFIG: Record<string, { description: string, image: string, theme: string }> = {
     jinnah: {
         description: 'Main Campus',
-        image: 'https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80',
+        image: 'https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=',
         theme: 'green'
     },
     sachal: {
         description: 'Excellence in Learning',
-        image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80',
+        image: 'https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=',
         theme: 'blue'
     },
     latif: {
         description: 'Primary Group',
-        image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80',
+        image: 'https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=',
         theme: 'yellow'
     },
     shebaz: {
         description: 'Senior Group',
-        image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80',
+        image: 'https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=',
         theme: 'rose'
     },
     iqbal: {
         description: 'Creative Arts & Sciences',
-        image: 'https://images.unsplash.com/photo-1519452635265-7b1fbfd1e4e0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80',
+        image: 'https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=',
         theme: 'red'
     },
     ghazali: {
         description: 'Advanced Studies',
-        image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80',
+        image: 'https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=',
         theme: 'orange'
     }
 };
 
 const CampusDashboard: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    const numericCampusId = getCampusNumericId(id);
-    const campusConfig = id ? CAMPUS_UI_CONFIG[id.toLowerCase()] : null;
+    const params = useParams();
+    const identifier = params.slug || params.id; // Grab whichever one the router is using
+    const safeSlug = identifier?.toLowerCase();
 
-    const [campusDetails, setCampusDetails] = useState<{name: string, color_theme: string} | null>(null);
+    const numericCampusId = getCampusNumericId(safeSlug);
+    const campusConfig = safeSlug ? CAMPUS_UI_CONFIG[safeSlug] : null;
+
+    const [campusDetails, setCampusDetails] = useState<{ name: string, color_theme: string } | null>(null);
 
     const [scoreboardData, setScoreboardData] = useState<any[]>([]);
     const [facultyData, setFacultyData] = useState<any[]>([]);
     const [events, setEvents] = useState<any[]>([]);
 
     const [loading, setLoading] = useState<boolean>(true);
-    
+
     // UI state
     const facultySections = ['Primary', 'Secondary', 'Senior', 'Admin'];
     const scoreboardSections = ['Junior', 'Middle', 'Senior', 'College'];
-    
+
     const [openSection, setOpenSection] = useState<string>('Primary');
     const [activeScoreboardSection, setActiveScoreboardSection] = useState<string>('Junior');
 
@@ -94,7 +97,10 @@ const CampusDashboard: React.FC = () => {
 
             try {
                 if (numericCampusId) {
-                    const { data: cData } = await (supabase.from('campuses') as any).select('*').eq('id', numericCampusId).single();
+                    const { data: cData, error: cError } = await (supabase.from('campuses') as any).select('*').eq('id', numericCampusId).single();
+
+                    console.log("DEBUG: Campus Fetch Attempt", { numericId: numericCampusId, data: cData, error: cError });
+
                     if (cData && isMounted) {
                         setCampusDetails(cData);
                     }
@@ -104,14 +110,14 @@ const CampusDashboard: React.FC = () => {
                 const { data: scores, error: scoreError } = await (supabase.from('scoreboard') as any)
                     .select('*')
                     .eq('campus_id', numericCampusId);
-                
+
                 if (scoreError) console.error("Campus Fetch Error:", scoreError.message);
                 if (isMounted) setScoreboardData(scores || []);
 
                 // Fetch Faculty - Assuming faculty are fetched for all or you can filter by campus if your db supports
                 const { data: faculty, error: facultyError } = await (supabase.from('faculty') as any)
                     .select('*');
-                
+
                 if (facultyError) console.error("Faculty Fetch Error:", facultyError.message);
                 if (isMounted) setFacultyData(faculty || []);
 
@@ -200,11 +206,11 @@ const CampusDashboard: React.FC = () => {
 
     // Safely group scoreboard
     const ALL_HOUSES = [
-        {name: 'Zest', color: 'bg-yellow-500'}, 
-        {name: 'Sharp', color: 'bg-emerald-500'}, 
-        {name: 'Brave', color: 'bg-rose-500'}, 
-        {name: 'Decent', color: 'bg-indigo-500'}, 
-        {name: 'Smart', color: 'bg-cyan-500'}
+        { name: 'Zest', color: 'bg-yellow-500' },
+        { name: 'Sharp', color: 'bg-emerald-500' },
+        { name: 'Brave', color: 'bg-rose-500' },
+        { name: 'Decent', color: 'bg-indigo-500' },
+        { name: 'Smart', color: 'bg-cyan-500' }
     ];
 
     const scoreboardBySection = Array.isArray(scoreboardData) ? scoreboardData.reduce((acc, curr) => {
@@ -215,7 +221,7 @@ const CampusDashboard: React.FC = () => {
     }, {} as Record<string, any[]>) : {};
 
     const fetchedPoints = scoreboardBySection[activeScoreboardSection] || [];
-    
+
     const getHousePoints = (houseName: string) => {
         const house = fetchedPoints.find((h: any) => h.house_name === houseName);
         return house ? (house.points || 0) : 0;
@@ -229,12 +235,12 @@ const CampusDashboard: React.FC = () => {
     })).sort((a, b) => b.points - a.points);
 
     const galleryImages = [
-        "https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1564981797816-1043664bf78d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1519452635265-7b1fbfd1e4e0?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1516534775068-ba3e84529573?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+        "https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=",
+        "https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=",
+        "https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=",
+        "https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=",
+        "https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg=",
+        "https://media.gettyimages.com/id/171306436/photo/red-brick-high-school-building-exterior.jpg?s=612x612&w=gi&k=20&c=8to_zwGxxcI1iYcix7DhmWahoDTlaqxEMzumDwJtxeg="
     ];
 
     return (
@@ -270,11 +276,10 @@ const CampusDashboard: React.FC = () => {
                                 <button
                                     key={sec}
                                     onClick={() => setActiveScoreboardSection(sec)}
-                                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-                                        activeScoreboardSection === sec
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeScoreboardSection === sec
                                         ? 'bg-primary text-white shadow-md'
                                         : 'bg-stone-50 text-stone-500 hover:bg-stone-100'
-                                    }`}
+                                        }`}
                                 >
                                     {sec}
                                 </button>
@@ -303,7 +308,7 @@ const CampusDashboard: React.FC = () => {
                             <div className="flex-1">
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="font-bold text-stone-700">{house.name}</span>
-                                    <motion.span 
+                                    <motion.span
                                         key={house.points}
                                         initial={{ scale: 1.5, color: '#f59e0b' }}
                                         animate={{ scale: 1, color: '#f59e0b' }}
@@ -328,9 +333,9 @@ const CampusDashboard: React.FC = () => {
 
                 {/* Dynamic Fee Structure - Phase 3 */}
                 <div className="mb-12">
-                    <CampusFeeStructure 
-                        campusId={numericCampusId} 
-                        themeColor={campusDetails.color_theme || campusConfig.theme} 
+                    <CampusFeeStructure
+                        campusId={numericCampusId}
+                        themeColor={campusDetails.color_theme || campusConfig.theme}
                     />
                 </div>
             </div>
@@ -359,7 +364,7 @@ const CampusDashboard: React.FC = () => {
                     <div className="space-y-4">
                         {facultySections.map(section => {
                             const sectionFaculty = Array.isArray(facultyData) ? facultyData.filter(f => f.section === section) : [];
-                            
+
                             return (
                                 <div key={section} className={`bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden ${openSection !== section ? 'opacity-70' : ''}`}>
                                     <button
@@ -379,10 +384,10 @@ const CampusDashboard: React.FC = () => {
                                             {sectionFaculty.length > 0 ? (
                                                 sectionFaculty.map((teacher: any) => (
                                                     <div key={teacher.id} className="flex items-center gap-4 p-3 rounded-lg border border-slate-50 hover:border-slate-200 transition-colors">
-                                                        <img 
-                                                            src={teacher.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(teacher.name || 'User')}&background=random`} 
-                                                            className="w-12 h-12 rounded-full object-cover bg-slate-100" 
-                                                            alt={teacher.name} 
+                                                        <img
+                                                            src={teacher.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(teacher.name || 'User')}&background=random`}
+                                                            className="w-12 h-12 rounded-full object-cover bg-slate-100"
+                                                            alt={teacher.name}
                                                             onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(teacher.name || 'User')}&background=random` }}
                                                         />
                                                         <div>
