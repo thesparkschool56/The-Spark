@@ -13,23 +13,35 @@ const Contact: React.FC = () => {
     });
     const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setStatus('submitting');
+        setErrorMessage(null);
 
         try {
-            const { error } = await supabase
-                .from('contact_messages')
-                .insert([formData]);
+            const { error } = await (supabase.from('messages') as any).insert([
+                {
+                    sender_name: formData.name,
+                    email: formData.email,
+                    message_body: formData.message,
+                    subject: 'General Inquiry',
+                    is_read: false
+                }
+            ]);
 
-            if (error) throw error;
+            if (error) {
+                alert("Error sending message: " + error.message);
+                throw error;
+            }
 
             setStatus('success');
             setFormData({ name: '', email: '', message: '' });
-            alert('Thank you for your message! We will get back to you soon.');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error submitting form:', error);
             setStatus('error');
+            setErrorMessage(error.message || 'Something went wrong. Please try again later.');
             setTimeout(() => setStatus('idle'), 5000);
         } finally {
             if (status !== 'error') setStatus('success');
@@ -175,7 +187,7 @@ const Contact: React.FC = () => {
                             )}
                             {status === 'error' && (
                                 <p className="text-center text-red-600 text-sm font-bold">
-                                    Something went wrong. Please try again later.
+                                    {errorMessage}
                                 </p>
                             )}
                         </form>

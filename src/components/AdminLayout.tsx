@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, GraduationCap, Contact, Mail } from 'lucide-react';
+import { Users, Calendar, MessageSquare, LogOut, GraduationCap, Contact, Mail, Briefcase, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const AdminLayout: React.FC = () => {
@@ -8,18 +8,22 @@ const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error('Error signing out:', error.message);
+        }
         navigate('/login');
     };
 
     const menuItems = [
-        { icon: <LayoutDashboard size={20} />, label: 'Scoreboard', path: '/admin' },
+        { icon: <Trophy size={20} />, label: 'Scoreboard', path: '/admin' },
         { icon: <Users size={20} />, label: 'Admissions', path: '/admin/admissions' },
         { icon: <Contact size={20} />, label: 'Faculty', path: '/admin/faculty' },
         { icon: <Calendar size={20} />, label: 'Events', path: '/admin/events' },
         { icon: <MessageSquare size={20} />, label: 'Reviews', path: '/admin/reviews' },
         { icon: <Users size={20} />, label: 'Founders', path: '/admin/founders' },
         { icon: <Mail size={20} />, label: 'Messages', path: '/admin/messages' },
+        { icon: <Briefcase size={20} />, label: 'Vacancies', path: '/admin/vacancies' },
     ];
 
     return (

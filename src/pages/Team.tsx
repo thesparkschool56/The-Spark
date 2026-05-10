@@ -4,29 +4,26 @@ import { supabase } from '../lib/supabase';
 import ShinyText from '../components/ui/ShinyText';
 import { User } from 'lucide-react';
 
-interface FacultyMember {
-    id: string;
-    name: string;
-    role: string;
-    section: 'PG - Class 2' | 'Class 3 - 5' | 'Class 6 - 8' | 'Class 9 - 10/12';
-    image_url?: string;
-    campus_id?: string;
-}
+
 
 const Team: React.FC = () => {
-    const [faculty, setFaculty] = useState<FacultyMember[]>([]);
+    const [faculty, setFaculty] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchFaculty = async () => {
-            const { data, error } = await supabase
-                .from('faculty')
-                .select('*')
-                .order('created_at', { ascending: true });
+            try {
+                const { data, error } = await supabase.from('faculty')
+                    .select('*')
+                    .order('created_at', { ascending: true });
 
-            if (data) setFaculty(data);
-            if (error) console.error('Error fetching faculty:', error);
-            setLoading(false);
+                if (data) setFaculty(data);
+                if (error) console.error('Error fetching faculty:', error);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchFaculty();

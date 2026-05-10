@@ -1,31 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const ProtectedRoute: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
 
-    const checkUser = React.useCallback(async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        setAuthenticated(!!session);
-        setLoading(false);
-    }, []);
-
     useEffect(() => {
-        const init = async () => {
-            await checkUser();
-        };
-        init();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
             setAuthenticated(!!session);
             setLoading(false);
+        };
+        
+        checkAuth();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setAuthenticated(!!session);
         });
 
         return () => subscription.unsubscribe();
-    }, [checkUser]);
+    }, []);
 
     if (loading) {
         return (

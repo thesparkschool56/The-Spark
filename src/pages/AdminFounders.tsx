@@ -3,25 +3,21 @@ import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, Loader2, Quote, User } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-interface Founder {
-    id: string;
-    name: string;
-    role: string;
-    quote: string;
-    image_url: string;
-    order: number;
-}
+import { Database } from '../lib/database.types';
+
+type Founder = Database['public']['Tables']['founders']['Row'];
 
 const AdminFounders: React.FC = () => {
     const [founders, setFounders] = useState<Founder[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<string | null>(null);
+    const [idToDelete, setIdToDelete] = useState<number | null>(null);
 
     // Form inputs
     const [name, setName] = useState('');
@@ -54,8 +50,8 @@ const AdminFounders: React.FC = () => {
     const handleEdit = (founder: Founder) => {
         setEditingId(founder.id);
         setName(founder.name);
-        setRole(founder.role);
-        setQuote(founder.quote || '');
+        setRole(founder.role || '');
+        setQuote(founder.bio || '');
         setImageUrl(founder.image_url || '');
         setShowForm(true);
     };
@@ -67,28 +63,27 @@ const AdminFounders: React.FC = () => {
         const founderData = {
             name,
             role,
-            quote,
+            bio: quote,
             image_url: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
         };
 
         let result;
         if (editingId) {
-            result = await supabase
-                .from('founders')
-                .update(founderData)
+            result = await (supabase.from('founders') as any)
+                .update(founderData as any)
                 .eq('id', editingId);
         } else {
-            result = await supabase
-                .from('founders')
-                .insert([founderData]);
+            result = await (supabase.from('founders') as any)
+                .insert([founderData as any]);
         }
 
         const { error } = result;
 
         if (error) {
             console.error('Error saving founder:', error);
-            alert(`Error ${editingId ? 'updating' : 'adding'} founder: ` + error.message);
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} founder: ` + error.message });
         } else {
+            setFormMessage({ type: 'success', text: `Founder successfully ${editingId ? 'updated' : 'added'}!` });
             setName('');
             setRole('');
             setQuote('');
@@ -96,11 +91,12 @@ const AdminFounders: React.FC = () => {
             setEditingId(null);
             setShowForm(false);
             fetchFounders();
+            setTimeout(() => setFormMessage(null), 3000);
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: number) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -108,16 +104,17 @@ const AdminFounders: React.FC = () => {
     const confirmDelete = async () => {
         if (!idToDelete) return;
 
-        const { error } = await supabase
-            .from('founders')
+        const { error } = await supabase.from('founders')
             .delete()
             .eq('id', idToDelete);
 
         if (error) {
             console.error('Delete error:', error);
-            alert('Error deleting founder: ' + error.message);
+            setFormMessage({ type: 'error', text: 'Error deleting founder: ' + error.message });
         } else {
             fetchFounders();
+            setFormMessage({ type: 'success', text: 'Founder deleted successfully.' });
+            setTimeout(() => setFormMessage(null), 3000);
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);
@@ -144,6 +141,12 @@ const AdminFounders: React.FC = () => {
                     <Plus size={18} /> Add Founder
                 </button>
             </div>
+
+            {formMessage && (
+                <div className={`p-4 rounded-xl text-sm border ${formMessage.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                    {formMessage.text}
+                </div>
+            )}
 
             {showForm && (
                 <div className="bg-stone-50 p-6 rounded-xl border border-stone-200 mb-6 animate-in slide-in-from-top-4 fade-in duration-200">
@@ -228,17 +231,17 @@ const AdminFounders: React.FC = () => {
                         founders.map(founder => (
                             <div key={founder.id} className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm flex gap-4 group relative hover:border-accent/30 transition-all">
                                 <img
-                                    src={founder.image_url}
+                                    src={founder.image_url || undefined}
                                     alt={founder.name}
                                     className="w-20 h-20 rounded-full object-cover bg-stone-100 border-2 border-white shadow-md"
                                 />
                                 <div className="flex-1">
                                     <h3 className="font-bold text-lg text-stone-800">{founder.name}</h3>
                                     <p className="text-accent text-sm font-medium uppercase tracking-wide mb-2">{founder.role}</p>
-                                    {founder.quote && (
+                                    {founder.bio && (
                                         <p className="text-stone-500 text-sm italic flex gap-2">
                                             <Quote size={12} className="shrink-0 mt-1" />
-                                            {founder.quote}
+                                            {founder.bio}
                                         </p>
                                     )}
                                 </div>

@@ -21,13 +21,19 @@ const CalendarPage: React.FC = () => {
 
     const fetchEvents = React.useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('events')
-            .select('*');
+        try {
+            const { data, error } = await supabase
+                .from('events')
+                .select('*')
+                .order('date', { ascending: true });
 
-        if (data) setEvents(data);
-        if (error) console.error('Error fetching events:', error);
-        setLoading(false);
+            if (data) setEvents(data);
+            if (error) console.error('Error fetching events:', error);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => {

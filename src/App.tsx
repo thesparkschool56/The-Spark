@@ -16,14 +16,16 @@ const CalendarPage = lazy(() => import('./pages/Calendar'));
 const CampusDashboard = lazy(() => import('./pages/CampusDashboard'));
 const Admissions = lazy(() => import('./pages/Admissions'));
 const Contact = lazy(() => import('./pages/Contact'));
-const Login = lazy(() => import('./pages/Login'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const AdminAdmissions = lazy(() => import('./pages/AdminAdmissions'));
 const AdminFaculty = lazy(() => import('./pages/AdminFaculty'));
 const AdminEvents = lazy(() => import('./pages/AdminEvents'));
 const AdminReviews = lazy(() => import('./pages/AdminReviews'));
 const AdminMessages = lazy(() => import('./pages/AdminMessages'));
 const AdminFounders = lazy(() => import('./pages/AdminFounders'));
+const Vacancies = lazy(() => import('./pages/Vacancies'));
+const AdminVacancies = lazy(() => import('./pages/AdminVacancies'));
+const AdminScoreboard = lazy(() => import('./pages/AdminScoreboard'));
 
 const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
@@ -52,7 +54,8 @@ const ScrollToTop = () => {
       '/admissions': 'Admissions 2024-25 | The Spark School & College',
       '/contact': 'Contact Us | The Spark School & College',
       '/login': 'Admin Login | The Spark School & College',
-      '/admin': 'Admin Dashboard | The Spark School & College'
+      '/admin': 'Admin Dashboard | The Spark School & College',
+      '/vacancies': 'Vacant Positions | The Spark School & College'
     };
 
     const currentTitle = titles[pathname] || 'The Spark School & College';
@@ -83,22 +86,24 @@ function App() {
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/events/:id" element={<EventDetails />} />
             <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/campus/:id" element={<CampusDashboard />} />
+            <Route path="/campus/:slug" element={<CampusDashboard />} />
             <Route path="/admissions" element={<Admissions />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/vacancies" element={<Vacancies />} />
+            <Route path="/login" element={<AdminLogin />} />
           </Route>
 
           {/* Admin Routes - Protected */}
           <Route element={<ProtectedRoute />}>
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
+              <Route index element={<AdminScoreboard />} />
               <Route path="admissions" element={<AdminAdmissions />} />
               <Route path="faculty" element={<AdminFaculty />} />
               <Route path="events" element={<AdminEvents />} />
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="founders" element={<AdminFounders />} />
               <Route path="messages" element={<AdminMessages />} />
+              <Route path="vacancies" element={<AdminVacancies />} />
             </Route>
           </Route>
         </Routes>

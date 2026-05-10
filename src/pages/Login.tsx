@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -16,18 +16,17 @@ const Login: React.FC = () => {
         setError(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            const { error: authError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
-            if (error) {
-                if (error.message.includes('Invalid login credentials')) {
-                    throw new Error('Incorrect email or password. Please try again.');
-                }
-                throw error;
+            if (authError) {
+                setError(authError.message);
+            } else {
+                // Supabase handles the session automatically in the client
+                navigate('/admin');
             }
-            navigate('/admin');
         } catch (err: unknown) {
             const error = err as Error;
             setError(error.message || 'An unexpected error occurred. Please try again.');
@@ -40,8 +39,8 @@ const Login: React.FC = () => {
         <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
             <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
                 <div className="bg-primary p-8 text-center">
-                    <div className="inline-block p-1 bg-white rounded-xl mb-4 overflow-hidden w-20 h-20">
-                        <img src="/sp.jpg" alt="The Spark Logo" className="w-full h-full object-contain" />
+                    <div className="inline-block p-1 bg-white rounded-full mb-4 overflow-hidden w-20 h-20">
+                        <img src="/sp.jpg" alt="The Spark Logo" className="w-full h-full object-cover rounded-full" />
                     </div>
                     <h1 className="text-2xl font-serif font-bold text-white tracking-wide uppercase">Institutional Access</h1>
                     <p className="text-accent-light/80 mt-2 text-[10px] font-black uppercase tracking-[0.3em]">The Spark School & College</p>

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CarouselProps {
-    children: React.ReactNode[];
+    children: React.ReactNode;
     autoPlay?: boolean;
     interval?: number;
     className?: string;
@@ -18,15 +18,17 @@ const Carousel: React.FC<CarouselProps> = ({
     const [currentIndex, setCurrentIndex] = useState(0);
     const [direction, setDirection] = useState(0);
 
+    const childrenArray = React.Children.toArray(children);
+
     const nextSlide = useCallback(() => {
         setDirection(1);
-        setCurrentIndex((prev) => (prev + 1) % children.length);
-    }, [children.length]);
+        setCurrentIndex((prev) => (prev + 1) % childrenArray.length);
+    }, [childrenArray.length]);
 
     const prevSlide = useCallback(() => {
         setDirection(-1);
-        setCurrentIndex((prev) => (prev - 1 + children.length) % children.length);
-    }, [children.length]);
+        setCurrentIndex((prev) => (prev - 1 + childrenArray.length) % childrenArray.length);
+    }, [childrenArray.length]);
 
     useEffect(() => {
         if (!autoPlay) return;
@@ -68,7 +70,7 @@ const Carousel: React.FC<CarouselProps> = ({
                         }}
                         className="absolute w-full"
                     >
-                        {children[currentIndex]}
+                        {childrenArray[currentIndex]}
                     </motion.div>
                 </AnimatePresence>
             </div>
@@ -91,7 +93,7 @@ const Carousel: React.FC<CarouselProps> = ({
 
             {/* Indicators */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-                {children.map((_, index) => (
+                {childrenArray.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => {

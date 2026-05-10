@@ -24,7 +24,7 @@ const Navbar: React.FC = () => {
         { name: 'Events', path: '/#events' },
         { name: 'Reviews', path: '/#reviews' },
         { name: 'Fees', path: '/#fees' },
-        { name: 'Apply', path: '/#apply' },
+        { name: 'Enroll Now', path: '/#apply' },
     ];
 
     return (
@@ -35,8 +35,8 @@ const Navbar: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center">
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="bg-white p-1 rounded-xl shadow-lg group-hover:shadow-primary/30 transition-all overflow-hidden w-12 h-12 flex items-center justify-center">
-                            <img src="/sp.jpg" alt="The Spark Logo" className="w-full h-full object-contain" />
+                        <div className="bg-white p-1 rounded-full shadow-lg group-hover:shadow-primary/30 transition-all overflow-hidden w-12 h-12 flex items-center justify-center">
+                            <img src="/sp.jpg" alt="The Spark Logo" className="w-full h-full object-cover rounded-full" />
                         </div>
                         <div className="flex flex-col">
                             <span className="font-serif text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 leading-none">The Spark</span>
@@ -59,6 +59,9 @@ const Navbar: React.FC = () => {
                                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full ${location.pathname === link.path ? 'w-full' : ''}`}></span>
                             </Link>
                         ))}
+                        <Link to="/vacancies" className="font-bold transition-all text-xs uppercase tracking-wider relative group text-stone-600 hover:text-accent border-r border-stone-200 pr-4 mr-2">
+                            Join as Team
+                        </Link>
                         <Link to="/contact" className="bg-slate-900 text-white px-7 py-2.5 rounded-full font-bold text-xs uppercase tracking-wide hover:bg-primary transition-colors shadow-lg shadow-slate-900/20 hover:shadow-primary/30">
                             Contact Us
                         </Link>
@@ -117,6 +120,13 @@ const Navbar: React.FC = () => {
                                     </motion.div>
                                 ))}
                                 <div className="pt-6 space-y-4">
+                                    <Link
+                                        to="/vacancies"
+                                        onClick={() => setIsOpen(false)}
+                                        className="block w-full text-center bg-stone-100 text-stone-800 py-4 rounded-xl font-bold border border-stone-200"
+                                    >
+                                        Join as Team
+                                    </Link>
                                     <Link
                                         to="/contact"
                                         onClick={() => setIsOpen(false)}

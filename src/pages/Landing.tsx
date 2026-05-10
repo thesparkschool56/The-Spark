@@ -6,10 +6,10 @@ import {
     Star,
     ArrowRight,
     Quote,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Briefcase
 } from 'lucide-react';
-import { CAMPUSES, REVIEWS } from '../data';
-import type { Event as DataEvent, Founder, Review } from '../data';
+
 import { supabase } from '../lib/supabase';
 import SplitText from '../components/ui/SplitText';
 import ShinyText from '../components/ui/ShinyText';
@@ -18,47 +18,84 @@ import InfiniteSlider from '../components/ui/InfiniteSlider';
 import clsx from 'clsx';
 
 const Landing: React.FC = () => {
-    const [events, setEvents] = useState<DataEvent[]>([]);
-    const [founders, setFounders] = useState<Founder[]>([]);
-    const [reviews, setReviews] = useState<Review[]>(REVIEWS);
+    const [events, setEvents] = useState<any[]>([]);
+    const [founders, setFounders] = useState<any[]>([]);
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [campuses, setCampuses] = useState<any[]>([]);
+    const [vacancies, setVacancies] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
-            // Fetch Founders
-            const { data: foundersData } = await supabase
-                .from('founders')
-                .select('*')
-                .order('order', { ascending: true });
+            try {
+                // Fetch Founders - Pruned
+                const { data: foundersData } = await supabase
+                    .from('founders')
+                    .select('name, role, quote, bio, image_url, order')
+                    .order('order', { ascending: true });
+                setFounders(foundersData || []);
 
-            if (foundersData && foundersData.length > 0) {
-                setFounders(foundersData);
-            } else {
-                setFounders([
-                    { name: "Dr. Alistair Spark", role: "Co-Founder & Chairman", quote: "Education is not just about filling a bucket, but lighting a fire.", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" },
-                    { name: "Eleanor V. Thorne", role: "Co-Founder & Director of Academics", quote: "We build character first. Excellence follows naturally.", img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" }
-                ]);
-            }
+                // Fetch Events - Pruned & Limited to 4
+                const { data: eventsData } = await supabase
+                    .from('events')
+                    .select('id, title, date, image_url, category')
+                    .order('date', { ascending: true })
+                    .limit(4);
+                setEvents(eventsData || []);
 
-            const { data: eventsData } = await supabase
-                .from('events')
-                .select('*')
-                .order('date', { ascending: true });
+                // Fetch Reviews - Correct Schema
+                const { data: reviewsData } = await supabase
+                    .from('reviews')
+                    .select('id, reviewer_name, review_text, role, campus_id')
+                    .eq('is_published', true)
+                    .limit(5);
+                setReviews(reviewsData || []);
 
-            setEvents(eventsData || []);
+                // Fetch Campuses
+                const { data: campusesData } = await supabase
+                    .from('campuses')
+                    .select('*')
+                    .order('id', { ascending: true });
+                setCampuses(campusesData || []);
 
-            // Fetch Reviews
-            const { data: reviewsData } = await supabase
-                .from('reviews')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(3);
-
-            if (reviewsData && reviewsData.length > 0) {
-                setReviews(reviewsData);
+                // Fetch Vacancies - Limited to 3
+                const { data: vacanciesData } = await supabase
+                    .from('job_positions')
+                    .select('*')
+                    .eq('status', 'Open')
+                    .order('created_at', { ascending: false })
+                    .limit(3);
+                setVacancies(vacanciesData || []);
+            } catch (error) {
+                console.error("Error fetching landing data", error);
+            } finally {
+                setLoading(false);
             }
         };
         fetchData();
     }, []);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-white container mx-auto px-4 py-20 space-y-20">
+                <div className="h-20 w-3/4 bg-stone-100 animate-pulse rounded-2xl mx-auto" />
+                <div className="grid md:grid-cols-2 gap-12">
+                    <div className="h-[500px] bg-stone-50 animate-pulse rounded-[3rem]" />
+                    <div className="space-y-6 flex flex-col justify-center">
+                        <div className="h-4 w-1/4 bg-stone-100 animate-pulse rounded-full" />
+                        <div className="h-12 w-full bg-stone-100 animate-pulse rounded-xl" />
+                        <div className="h-12 w-5/6 bg-stone-100 animate-pulse rounded-xl" />
+                        <div className="h-24 w-full bg-stone-50 animate-pulse rounded-xl" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-64 bg-stone-50 animate-pulse rounded-[2rem]" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-20 pb-20">
@@ -96,7 +133,7 @@ const Landing: React.FC = () => {
                             className="flex flex-col sm:flex-row gap-4"
                         >
                             <Link to="/admissions" className="bg-primary text-white px-10 py-5 rounded-xl font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-2xl shadow-primary/20 uppercase tracking-widest text-xs">
-                                Apply Now <ArrowRight size={18} />
+                                Enroll Now <ArrowRight size={18} />
                             </Link>
                             <Link to="/#campuses" className="px-10 py-5 rounded-xl font-bold text-slate-700 hover:text-primary transition-all border border-slate-200 hover:border-primary/30 text-center uppercase tracking-widest text-xs">
                                 Explore Campuses
@@ -108,6 +145,7 @@ const Landing: React.FC = () => {
                         <img
                             src="THE SPARK/src/components/pages/sp main.jpg"
                             alt="Campus Architecture"
+                            loading="lazy"
                             className="w-full h-full object-cover transform scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent"></div>
@@ -126,6 +164,7 @@ const Landing: React.FC = () => {
                         <img
                             src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
                             alt="Student Life"
+                            loading="lazy"
                             className="relative rounded-[2.5rem] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.25)] z-10 w-full object-cover h-[550px]"
                         />
                         <div className="absolute -bottom-12 -right-12 bg-white/95 backdrop-blur-md p-8 rounded-3xl shadow-2xl z-20 max-w-xs hidden lg:block border border-stone-100">
@@ -178,13 +217,16 @@ const Landing: React.FC = () => {
 
                 <div className="max-w-6xl mx-auto px-4">
                     <Carousel className="h-[550px] md:h-[600px]" autoPlay={true} interval={8000}>
-                        {founders.map((founder, i) => (
+                        {(!founders || founders.length === 0) ? (
+                            <div className="flex items-center justify-center h-full"><span className="text-stone-400">Loading founders...</span></div>
+                        ) : (founders || []).map((founder, i) => (
                             <div key={i} className="h-full py-6">
                                 <div className="bg-white rounded-[3rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.1)] overflow-hidden border border-stone-100 h-full flex flex-col md:flex-row">
                                     <div className="w-full md:w-5/12 h-64 md:h-full relative overflow-hidden">
-                                        <img
-                                            src={founder.img || founder.image_url}
-                                            alt={founder.name}
+                                         <img
+                                            src={founder?.image_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=800&h=800&q=80'}
+                                            alt={founder?.name}
+                                            loading="lazy"
                                             className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/10"></div>
@@ -193,13 +235,13 @@ const Landing: React.FC = () => {
                                         <Quote size={100} className="text-stone-50 absolute top-10 right-10 -z-0 opacity-40" />
                                         <div className="relative z-10">
                                             <p className="text-2xl md:text-4xl text-stone-700 italic font-serif leading-relaxed mb-12 tracking-tight">
-                                                "{founder.quote}"
+                                                "{founder?.quote || founder?.bio}"
                                             </p>
                                             <div className="flex items-center gap-6">
                                                 <div className="h-px w-16 bg-accent/20"></div>
                                                 <div>
-                                                    <h4 className="text-3xl font-bold text-stone-900 uppercase tracking-tighter">{founder.name}</h4>
-                                                    <p className="text-primary font-bold tracking-[0.3em] uppercase text-[10px] mt-2">{founder.role}</p>
+                                                    <h4 className="text-3xl font-bold text-stone-900 uppercase tracking-tighter">{founder?.name}</h4>
+                                                    <p className="text-primary font-bold tracking-[0.3em] uppercase text-[10px] mt-2">{founder?.role}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -224,20 +266,22 @@ const Landing: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                    {CAMPUSES.map((campus) => (
-                        <Link to={`/campus/${campus.id}`} key={campus.id} className="group relative h-[450px] overflow-hidden rounded-[2.5rem] cursor-pointer shadow-2xl hover:shadow-primary/20 transition-all duration-700">
+                    {(!campuses || campuses.length === 0) ? (
+                        <div className="col-span-3 text-center text-stone-400">Loading campuses...</div>
+                    ) : (campuses || []).map((campus) => (
+                        <Link to={`/campus/${campus?.slug}`} key={campus?.id} className="group relative h-[450px] overflow-hidden rounded-[2.5rem] cursor-pointer shadow-2xl hover:shadow-primary/20 transition-all duration-700">
                             <img
-                                src={`${campus.image}&w=800&q=80`}
-                                alt={campus.name}
+                                src={`${campus?.image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1'}&w=800&q=80`}
+                                alt={campus?.name}
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 grayscale-[0.2] group-hover:grayscale-0"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-stone-950/95 via-stone-900/40 to-transparent">
                                 <div className="absolute bottom-0 left-0 p-10 w-full">
-                                    <h3 className="text-3xl font-serif text-white mb-3 uppercase tracking-tight">{campus.name}</h3>
+                                    <h3 className="text-3xl font-serif text-white mb-3 uppercase tracking-tight">{campus?.name}</h3>
                                     <div className="h-0 overflow-hidden group-hover:h-auto opacity-0 group-hover:opacity-100 transition-all duration-500">
                                         <p className="text-stone-300 text-sm font-light leading-relaxed transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                                            {campus.description}
+                                            {campus?.description || 'Experience excellence at this campus.'}
                                         </p>
                                         <div className="flex items-center gap-2 mt-6 text-accent font-bold text-[10px] uppercase tracking-[0.3em]">
                                             View Dashboard <div className="w-8 h-px bg-accent"></div>
@@ -250,7 +294,7 @@ const Landing: React.FC = () => {
                 </div>
             </section>
 
-            {/* Events Section - Redesigned Premium Layout */}
+            {/* Events Section - Redesigned Teasers */}
             <section id="events" className="container mx-auto px-4 py-24 bg-stone-50/50 rounded-[4rem] my-10 border border-stone-100/50 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-[100px] -mr-48 -mt-48"></div>
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -ml-48 -mb-48"></div>
@@ -260,55 +304,48 @@ const Landing: React.FC = () => {
                     <h2 className="text-4xl md:text-6xl font-serif text-stone-900 mt-2 uppercase tracking-tight">Upcoming <span className="text-gradient">Events</span></h2>
                 </div>
 
-                {events.length === 0 ? (
+                 {!events || events.length === 0 ? (
                     <div className="text-center py-32 bg-white/50 rounded-[3rem] border border-stone-100 shadow-inner relative z-10">
                         <CalendarIcon size={64} className="mx-auto text-stone-200 mb-6" />
                         <p className="text-stone-400 font-serif italic text-xl">No upcoming events are currently scheduled.</p>
                     </div>
                 ) : (
                     <div className="relative z-10">
-                        <InfiniteSlider speed={60} gap={32} hoverToPause={true}>
-                            {events.map((event) => (
-                                <motion.div
-                                    key={event.id}
-                                    className="w-[300px] md:w-[350px] bg-white rounded-[2.5rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-stone-100 overflow-hidden group hover:-translate-y-3 transition-all duration-700 flex-shrink-0"
-                                >
-                                    <Link to={`/events/${event.id}`}>
-                                        <div className="relative h-60 overflow-hidden">
+                        <InfiniteSlider gap={32} speed={40} hoverToPause={true}>
+                            {(events || []).map((event) => (
+                                <Link to={`/events/${event.id}`} key={event.id} className="group block w-[300px] md:w-[350px]">
+                                    <div className="bg-white rounded-[2.5rem] p-4 border border-stone-100 shadow-sm hover:shadow-2xl transition-all duration-700 h-full flex flex-col">
+                                        <div className="relative h-48 mb-6 overflow-hidden rounded-[2rem]">
                                             <img
-                                                src={`${event.image_url || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1'}&w=600&q=80`}
+                                                src={event.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'}
                                                 alt={event.title}
                                                 loading="lazy"
-                                                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                                                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 scale-105 group-hover:scale-100"
                                             />
-                                            <div className="absolute top-6 left-6 bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl text-center shadow-2xl min-w-[75px] border border-stone-100">
-                                                <span className="block text-[10px] text-accent uppercase font-black tracking-widest leading-none mb-1">{new Date(event.date).toLocaleString('default', { month: 'short' })}</span>
-                                                <span className="block text-3xl font-black text-stone-800 leading-none">{new Date(event.date).getDate()}</span>
-                                            </div>
-                                            <div className="absolute top-6 right-6">
+                                            <div className="absolute top-4 right-4">
                                                 <span className={clsx(
-                                                    "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest text-white shadow-lg backdrop-blur-sm border border-white/20",
-                                                    event.category === 'Exam' ? "bg-primary/80" :
-                                                        event.category === 'Sports' ? "bg-emerald-600/80" :
-                                                            event.category === 'Academic' ? "bg-accent/80" : "bg-stone-500/80"
+                                                    "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest text-white backdrop-blur-md shadow-lg",
+                                                    event?.category === 'Exam' ? "bg-primary/80" :
+                                                        event?.category === 'Sports' ? "bg-emerald-600/80" :
+                                                            event?.category === 'Academic' ? "bg-accent/80" : "bg-stone-500/80"
                                                 )}>
-                                                    {event.category}
+                                                    {event?.category}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="p-8 text-left whitespace-normal">
-                                            <h3 className="font-bold text-lg text-stone-800 mb-6 line-clamp-2 min-h-[3.5rem] group-hover:text-primary transition-colors uppercase tracking-tight font-serif leading-tight">
+                                        <div className="px-2 flex flex-col flex-1">
+                                            <p className="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">
+                                                {event?.date ? new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                                            </p>
+                                            <h3 className="font-serif font-bold text-xl text-stone-900 mb-4 group-hover:text-primary transition-colors uppercase leading-tight line-clamp-2">
                                                 {event.title}
                                             </h3>
-                                            <div className="flex items-center justify-between pt-6 border-t border-stone-50">
-                                                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em]">Event Details</span>
-                                                <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-sm ring-4 ring-transparent group-hover:ring-primary/10">
-                                                    <ArrowRight size={16} />
-                                                </div>
+                                            <div className="mt-auto flex items-center gap-2 text-[10px] font-black text-stone-400 uppercase tracking-widest group-hover:text-stone-600 transition-colors">
+                                                View Details <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                                             </div>
                                         </div>
-                                    </Link>
-                                </motion.div>
+                                    </div>
+                                </Link>
                             ))}
                         </InfiniteSlider>
                     </div>
@@ -320,128 +357,93 @@ const Landing: React.FC = () => {
                 </div>
             </section>
 
-            {/* Reviews Section */}
-            <section id="reviews" className="container mx-auto px-4 py-20">
-                <div className="text-center mb-20">
-                    <span className="text-accent font-bold tracking-[0.4em] uppercase text-[10px] mb-2 block">Testimonials</span>
-                    <h2 className="text-4xl md:text-6xl font-serif text-slate-900 mt-2 uppercase tracking-tight">Student <span className="text-gradient">Voices</span></h2>
+            {/* Reviews Section - Infinite Marquee */}
+            <section id="reviews" className="py-24 bg-white overflow-hidden border-t border-stone-100">
+                <style>{`
+                    @keyframes marquee {
+                        0% { transform: translateX(0); }
+                        100% { transform: translateX(calc(-50% - 1rem)); }
+                    }
+                    .animate-marquee {
+                        animation: marquee 40s linear infinite;
+                    }
+                    .group:hover .animate-marquee {
+                        animation-play-state: paused;
+                    }
+                `}</style>
+                <div className="container mx-auto px-4 text-center mb-16">
+                    <span className="text-accent font-bold tracking-[0.6em] uppercase text-[10px] mb-4 block">Testimonials</span>
+                    <h2 className="text-4xl md:text-5xl font-serif text-stone-900 mt-2 uppercase tracking-tight">Voices of the Legacy</h2>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-10">
-                    {reviews.map((review, i) => (
-                        <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.1 }}
-                            className="bg-white p-10 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] border border-stone-100 relative hover:-translate-y-3 transition-all duration-500 h-full flex flex-col"
-                        >
-                            <Quote size={80} className="text-stone-50 absolute top-6 right-6 -z-0 opacity-60" />
-                            <div className="relative z-10 flex flex-col h-full">
-                                <div className="flex gap-1 text-accent mb-8">
-                                    {[...Array(5)].map((_, idx) => <Star key={idx} size={16} fill="currentColor" strokeWidth={0} />)}
-                                </div>
-                                <p className="text-stone-600 italic mb-10 leading-relaxed text-xl font-light font-serif flex-1">"{review.text}"</p>
-                                <div className="flex items-center gap-5 pt-8 border-t border-stone-50">
-                                    <div className="w-14 h-14 rounded-full bg-stone-100 border-2 border-white shadow-xl overflow-hidden ring-4 ring-stone-50">
-                                        <img
-                                            src={review.image_url || `https://ui-avatars.com/api/?name=${review.name.replace(' ', '+')}&background=random&color=fff&bold=true`}
-                                            alt={review.name}
-                                            className="w-full h-full object-cover"
+                <div className="relative flex overflow-x-hidden group">
+                    {(!reviews || reviews.length === 0) ? (
+                        <div className="text-center text-stone-400 py-10 w-full">No reviews available yet.</div>
+                    ) : (
+                        <div className="flex animate-marquee gap-8 whitespace-nowrap px-4">
+                            {[...(reviews || []), ...(reviews || [])].map((review, i) => (
+                                <div key={i} className="w-[400px] md:w-[500px] flex-shrink-0 bg-stone-50/50 border border-stone-100 p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:bg-white transition-all duration-500 whitespace-normal">
+                                    <div className="flex justify-between items-start mb-8">
+                                        <div className="flex gap-1 text-accent">
+                                            {[...Array(5)].map((_, idx) => <Star key={idx} size={14} fill="currentColor" strokeWidth={0} />)}
+                                        </div>
+                                        <Quote size={32} className="text-stone-200" />
+                                    </div>
+                                     <p className="text-stone-600 text-lg leading-relaxed font-serif italic mb-10">"{review?.review_text}"</p>
+                                    <div className="flex items-center gap-4">
+                                        <img 
+                                            src={`https://ui-avatars.com/api/?name=${review?.reviewer_name?.replace(/ /g, '+') || 'A'}&background=random&color=fff&bold=true`} 
+                                            alt={review?.reviewer_name || 'User'} 
+                                            loading="lazy"
+                                            className="w-12 h-12 rounded-full object-cover shadow-md border border-stone-100"
                                         />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-stone-900 text-base uppercase tracking-tight">{review.name}</h4>
-                                        <p className="text-[10px] uppercase tracking-[0.2em] text-primary font-black mt-1">{review.role}</p>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-stone-900 uppercase tracking-wider">{review?.reviewer_name || 'Anonymous'}</h4>
+                                            <p className="text-[9px] uppercase tracking-widest text-stone-400 font-bold mt-0.5">{review?.role || 'Parent / Student'}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                            ))}
+                        </div>
+                    )}
+                    {/* Gradient Fade Edges */}
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white to-transparent"></div>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white to-transparent"></div>
                 </div>
             </section>
-
-            {/* Fees Section */}
-            <section id="fees" className="container mx-auto px-4 py-24 bg-white rounded-[4rem] my-10 border border-stone-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)]">
-                <div className="text-center mb-20">
-                    <span className="text-accent font-bold tracking-[0.5em] uppercase text-[10px] mb-4 block">Investment in Future</span>
-                    <h2 className="text-4xl md:text-6xl font-serif text-stone-900 mt-2 uppercase tracking-tight">Fee <span className="text-gradient">Structure</span></h2>
-                    <p className="text-stone-400 mt-8 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-light">Transparent and competitive academic investment plans for the 2024-2025 cycle.</p>
+            {/* Vacancies Section */}
+            <section className="container mx-auto px-4 py-24">
+                <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-4">
+                    <div className="text-center md:text-left">
+                        <span className="text-primary font-bold tracking-[0.4em] uppercase text-[10px] mb-2 block">Careers</span>
+                        <h2 className="text-4xl md:text-6xl font-serif text-stone-900 uppercase tracking-tight">Join Our Faculty</h2>
+                    </div>
+                    <Link to="/careers" className="flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all uppercase tracking-widest text-[10px] bg-stone-50 px-6 py-3 rounded-full border border-stone-100">
+                        View All Positions <ArrowRight size={14} />
+                    </Link>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-10 px-4 md:px-10">
-                    {[
-                        {
-                            level: "Junior School",
-                            grades: "PG to Class 2",
-                            monthly: "Rs. 8,500",
-                            admission: "Rs. 15,000",
-                            features: ["Interactive Learning", "Basic Arts & Crafts", "Physical Education", "Play-based Curriculum"],
-                            accent: "border-stone-100"
-                        },
-                        {
-                            level: "Middle School",
-                            grades: "Class 3 to 8",
-                            monthly: "Rs. 10,500",
-                            admission: "Rs. 15,000",
-                            features: ["Subject Specialization", "Science Labs Access", "ICT Education", "Sports & Clubs"],
-                            accent: "border-primary/10",
-                            popular: true
-                        },
-                        {
-                            level: "Senior School",
-                            grades: "Class 9 to 12",
-                            monthly: "Rs. 13,500",
-                            admission: "Rs. 15,000",
-                            features: ["Board Exam Prep", "Career Counseling", "Advanced Labs", "Leadership Programs"],
-                            accent: "border-stone-200"
-                        }
-                    ].map((plan, i) => (
-                        <motion.div
-                            key={i}
-                            whileHover={{ y: -15 }}
-                            className={clsx(
-                                "bg-white p-12 rounded-[3rem] shadow-2xl transition-all duration-700 flex flex-col relative overflow-hidden",
-                                plan.popular ? "shadow-primary/10 ring-2 ring-primary/20 border-transparent" : "shadow-stone-200/50 border border-stone-100"
-                            )}
-                        >
-                            {plan.popular && (
-                                <div className="absolute top-0 right-0 bg-primary text-white px-8 py-2 rounded-bl-3xl text-[9px] font-black uppercase tracking-[0.3em]">
-                                    Recommended
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {(!vacancies || vacancies.length === 0) ? (
+                        <div className="col-span-3 text-center text-stone-400 py-10 border border-stone-100 rounded-[2.5rem]">No open positions at the moment.</div>
+                    ) : (vacancies || []).map((job) => (
+                        <div key={job?.id} className="bg-white border border-stone-100 rounded-[2rem] p-8 hover:shadow-xl transition-all duration-500 group flex flex-col justify-between h-full">
+                            <div>
+                                <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-800 mb-6 group-hover:scale-110 transition-transform">
+                                    <Briefcase size={24} />
                                 </div>
-                            )}
-                            <h3 className="text-3xl font-serif text-stone-900 mb-2 uppercase tracking-tight">{plan.level}</h3>
-                            <p className="text-stone-400 text-[10px] font-black uppercase tracking-[0.2em] mb-10">{plan.grades}</p>
-
-                            <div className="mb-10">
-                                <div className="text-5xl font-black text-primary mb-2 tracking-tighter">{plan.monthly}</div>
-                                <div className="text-stone-400 text-[9px] font-black uppercase tracking-[0.3em]">Monthly Tuition</div>
+                                <h3 className="font-serif font-bold text-2xl text-stone-900 mb-2">{job?.title}</h3>
+                                <div className="flex items-center gap-3 text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-6">
+                                    <span>{job?.department || 'General'}</span>
+                                    <span>•</span>
+                                    <span>Campus {job?.campus_id || 'All'}</span>
+                                </div>
+                                <p className="text-stone-500 text-sm line-clamp-3 mb-8">{job?.description}</p>
                             </div>
-
-                            <div className="mb-12 p-6 bg-stone-50 rounded-[2rem] border border-stone-100/50">
-                                <div className="text-[9px] text-stone-400 font-bold uppercase tracking-[0.2em] mb-2">Admission Fee</div>
-                                <div className="text-2xl font-black text-stone-800 tracking-tight">{plan.admission}</div>
-                            </div>
-
-                            <ul className="space-y-5 mb-12 flex-1">
-                                {plan.features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-center gap-4 text-stone-600 text-sm font-light">
-                                        <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center text-accent shadow-sm">
-                                            <Star size={12} fill="currentColor" />
-                                        </div>
-                                        {feature}
-                                    </li>
-                                ))}
-                            </ul>
-
-                            <Link to="/admissions" className={clsx(
-                                "w-full py-5 rounded-[1.5rem] font-bold transition-all text-center uppercase tracking-[0.3em] text-[10px] shadow-xl",
-                                plan.popular ? "bg-primary text-white hover:bg-stone-900 shadow-primary/20" : "bg-stone-50 text-stone-700 hover:bg-stone-100"
-                            )}>
-                                Get Prospectus
+                            <Link to="/careers" className="w-full bg-stone-900 text-white text-center py-4 rounded-xl font-bold hover:bg-black transition-all text-xs uppercase tracking-widest mt-auto">
+                                Apply Now
                             </Link>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </section>

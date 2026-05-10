@@ -1,164 +1,162 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, ArrowLeft, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, ArrowLeft, Loader2, Info, School } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-
-interface Event {
-    id: string;
-    title: string;
-    date: string;
-    description?: string;
-    image_url?: string;
-    category: string;
-    time?: string;
-    location?: string;
-    general_info?: string;
-}
 
 const EventDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const [event, setEvent] = useState<Event | null>(null);
+    const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchEvent = async () => {
             setLoading(true);
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('events')
                 .select('*')
-                .eq('id', id)
+                .eq('id', Number(id))
                 .single();
 
             if (data) setEvent(data);
-            if (error) console.error('Error fetching event:', error);
             setLoading(false);
         };
-
-        if (id) fetchEvent();
+        fetchEvent();
     }, [id]);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50">
-                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                <p className="text-stone-500 font-medium font-serif italic">Loading event details...</p>
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="text-center">
+                <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+                <p className="text-stone-400 font-serif italic">Curating event details...</p>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (!event) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50">
-                <h2 className="text-2xl font-serif font-bold text-stone-800 mb-4 tracking-tight uppercase">Event Not Found</h2>
-                <Link to="/#events" className="text-primary font-bold hover:underline uppercase tracking-widest text-sm">Return to Events</Link>
+    if (!event) return (
+        <div className="min-h-screen flex items-center justify-center bg-stone-50">
+            <div className="text-center">
+                <h1 className="text-4xl font-serif text-stone-800 mb-4 uppercase">Event Not Found</h1>
+                <Link to="/calendar" className="text-primary font-bold flex items-center justify-center gap-2">
+                    <ArrowLeft size={16} /> Return to Calendar
+                </Link>
             </div>
-        );
-    }
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-stone-50">
-            {/* Hero Image */}
-            <div className="h-[50vh] relative overflow-hidden">
-                <div className="absolute inset-0 bg-stone-900/60 z-10 opacity-70"></div>
-                <img
-                    src={event.image_url || 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80'}
+        <div className="min-h-screen bg-white">
+            {/* Stunning Hero Layout */}
+            <div className="h-[70vh] relative overflow-hidden">
+                <motion.img
+                    initial={{ scale: 1.1 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 1.5 }}
+                    src={event.image_url || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80'}
                     alt={event.title}
-                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    className="w-full h-full object-cover grayscale-[0.2]"
                 />
-                <div className="absolute bottom-0 left-0 w-full z-20 bg-gradient-to-t from-stone-900/95 to-transparent pt-32 pb-12">
-                    <div className="container mx-auto px-4">
-                        <Link to="/#events" className="inline-flex items-center text-stone-300 hover:text-white mb-6 transition-colors font-bold uppercase tracking-widest text-xs">
-                            <ArrowLeft size={16} className="mr-2" /> Back to Events
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-900/40 to-transparent" />
+                <div className="absolute bottom-0 left-0 w-full p-10 md:p-24 z-10">
+                    <div className="container mx-auto">
+                        <Link to="/calendar" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8 uppercase text-[10px] font-black tracking-[0.4em]">
+                            <ArrowLeft size={14} /> Back to Network Calendar
                         </Link>
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
+                        <motion.h1 
+                            initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
+                            className="text-5xl md:text-9xl font-serif text-white uppercase tracking-tighter leading-none mb-6"
                         >
-                            <span className="bg-primary/90 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block backdrop-blur-sm border border-white/10">
+                            {event.title}
+                        </motion.h1>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.5 }}
+                            className="flex items-center gap-4"
+                        >
+                            <span className="bg-accent text-white px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.4em] shadow-2xl">
                                 {event.category}
                             </span>
-                            <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-4 tracking-tight shadow-sm uppercase">{event.title}</h1>
+                            <div className="h-px w-20 bg-white/20 hidden md:block"></div>
+                            <span className="text-white/60 text-[10px] font-black uppercase tracking-[0.4em] hidden md:block">
+                                Event ID: {event.id}
+                            </span>
                         </motion.div>
                     </div>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="container mx-auto px-4 py-12 -mt-10 relative z-30">
-                <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Main Content */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="lg:col-span-2 bg-white rounded-2xl shadow-xl shadow-stone-200/50 p-8 md:p-12 border border-stone-100"
-                    >
-                        <div className="prose prose-lg text-stone-600 max-w-none">
-                            <h3 className="text-2xl font-serif font-bold text-stone-800 mb-6 uppercase tracking-widest flex items-center gap-2">
-                                <span className="w-1 h-6 bg-accent rounded-full"></span>
-                                Event Overview
-                            </h3>
-                            <p className="leading-relaxed mb-6 font-medium text-lg text-stone-700">
-                                {event.description || "Join us for this exciting event at The Spark School & College. It's a great opportunity for students to engage, learn, and grow."}
-                            </p>
-                            <div className="my-10 h-px bg-stone-100"></div>
-                            <h4 className="text-xl font-serif font-bold text-stone-800 mb-4 uppercase tracking-widest">General Information</h4>
-                            <p className="text-sm leading-relaxed mb-8 text-stone-500">
-                                {event.general_info || "Please ensure all participants arrive 15 minutes prior to the scheduled start time. For co-curricular events, students are expected to be in their respective house colors unless stated otherwise. Professional behavior and adherence to the school's code of conduct are mandatory for all attendees."}
-                            </p>
+            {/* Metadata Grid - Spacious & Minimalist */}
+            <div className="container mx-auto px-4 -mt-24 relative z-20">
+                <div className="bg-white border border-stone-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] rounded-[4rem] p-12 md:p-20 grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-20">
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                            <Calendar size={12} className="text-accent" /> Date
+                        </p>
+                        <p className="text-2xl font-bold text-stone-800 font-serif">
+                            {new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                    </div>
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                            <Clock size={12} className="text-accent" /> Time
+                        </p>
+                        <p className="text-2xl font-bold text-stone-800 font-serif">
+                            {event.time || '09:00 AM'}
+                        </p>
+                    </div>
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                            <MapPin size={12} className="text-accent" /> Location
+                        </p>
+                        <p className="text-2xl font-bold text-stone-800 font-serif line-clamp-1">
+                            {event.location || 'Main Auditorium'}
+                        </p>
+                    </div>
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                            <School size={12} className="text-accent" /> Target Class
+                        </p>
+                        <p className="text-2xl font-bold text-stone-800 font-serif">
+                            {event.class_name || 'All Students'} {event.section ? `- ${event.section}` : ''}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Typography Block */}
+                <div className="max-w-4xl mx-auto py-32 space-y-20">
+                    <section>
+                        <div className="flex items-center gap-4 mb-10">
+                            <div className="h-px flex-1 bg-stone-100" />
+                            <span className="text-stone-300 text-[10px] font-black uppercase tracking-[0.6em]">Event Overview</span>
+                            <div className="h-px flex-1 bg-stone-100" />
                         </div>
-                    </motion.div>
-
-                    {/* Sidebar */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="space-y-6"
-                    >
-                        {/* Info Card */}
-                        <div className="bg-white rounded-2xl shadow-xl shadow-stone-200/50 p-8 border-l-4 border-primary border border-stone-100">
-                            <h3 className="text-lg font-serif font-bold text-stone-800 mb-8 uppercase tracking-widest">Event Details</h3>
-
-                            <div className="space-y-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-primary shrink-0 border border-stone-100">
-                                        <Calendar size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Date</p>
-                                        <p className="font-bold text-stone-700 leading-tight">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-primary shrink-0 border border-stone-100">
-                                        <Clock size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Time</p>
-                                        <p className="font-bold text-stone-700 leading-tight">{event.time || "09:00 AM - 02:00 PM"}</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-primary shrink-0 border border-stone-100">
-                                        <MapPin size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Location</p>
-                                        <p className="font-bold text-stone-700 leading-tight text-sm">{event.location || "Main Auditorium"}</p>
-                                    </div>
+                        <p className="text-3xl md:text-4xl font-serif text-stone-700 leading-[1.6] italic tracking-tight text-center">
+                            "{event.description || 'No description provided for this upcoming event.'}"
+                        </p>
+                    </section>
+                    
+                    {event.general_info && (
+                        <section className="bg-stone-50 rounded-[3rem] p-12 md:p-20 border border-stone-100 relative overflow-hidden">
+                            <Info size={120} className="absolute -bottom-10 -right-10 text-stone-100 opacity-50" />
+                            <div className="relative z-10">
+                                <h4 className="text-stone-900 font-black uppercase tracking-[0.4em] text-xs mb-8 flex items-center gap-3">
+                                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" /> Important Guidelines
+                                </h4>
+                                <div className="text-stone-500 font-light leading-loose text-lg whitespace-pre-wrap columns-1 md:columns-2 gap-12">
+                                    {event.general_info}
                                 </div>
                             </div>
+                        </section>
+                    )}
 
-
-                        </div>
-
-                        {/* Share Card */}
-
-                    </motion.div>
+                    <div className="text-center pt-10">
+                        <Link to="/admissions" className="inline-block bg-stone-900 text-white px-12 py-6 rounded-2xl font-black text-[10px] uppercase tracking-[0.5em] hover:bg-primary transition-all shadow-2xl hover:scale-105 active:scale-95">
+                            Enroll For Admission
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>

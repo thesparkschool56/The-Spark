@@ -5,18 +5,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
 interface FacultyMember {
-    id: string;
+    id: number;
     name: string;
     role: string;
     section: 'PG - Class 2' | 'Class 3 - 5' | 'Class 6 - 8' | 'Class 9 - 10/12';
     image_url?: string;
-    campus_id?: string;
+    campus_id?: number | null;
 }
 
 const AdminFaculty: React.FC = () => {
     const [faculty, setFaculty] = useState<FacultyMember[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Form
     const [name, setName] = useState('');
@@ -24,21 +25,14 @@ const AdminFaculty: React.FC = () => {
     const [section, setSection] = useState<'PG - Class 2' | 'Class 3 - 5' | 'Class 6 - 8' | 'Class 9 - 10/12'>('PG - Class 2');
     const [campusId, setCampusId] = useState('all');
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<string | null>(null);
+    const [idToDelete, setIdToDelete] = useState<number | null>(null);
 
-    const CAMPUSES = [
-        { id: 'north', name: 'North Campus' },
-        { id: 'city', name: 'City Campus' },
-        { id: 'wings', name: 'International Wing' },
-        { id: 'science', name: 'Science Park' },
-        { id: 'arts', name: 'Arts District' },
-        { id: 'sports', name: 'Sports Academy' }
-    ];
+    const [campuses, setCampuses] = useState<{ id: number, name: string }[]>([]);
 
     const fetchFaculty = React.useCallback(async () => {
         setLoading(true);
@@ -53,8 +47,13 @@ const AdminFaculty: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        const fetchCampuses = async () => {
+            const { data } = await supabase.from('campuses').select('id, name');
+            if (data) setCampuses(data);
+        };
         const init = async () => {
             await fetchFaculty();
+            await fetchCampuses();
         };
         init();
     }, [fetchFaculty]);
@@ -64,7 +63,7 @@ const AdminFaculty: React.FC = () => {
         setName(member.name);
         setRole(member.role);
         setSection(member.section);
-        setCampusId(member.campus_id || 'all');
+        setCampusId(member.campus_id ? String(member.campus_id) : 'all');
         setShowForm(true);
     };
 
@@ -76,42 +75,38 @@ const AdminFaculty: React.FC = () => {
             name,
             role,
             section,
-            campus_id: campusId === 'all' ? null : campusId,
+            campus_id: campusId === 'all' ? null : Number(campusId),
             image_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random` // Default placeholder
         };
 
         let result;
         if (editingId) {
-            // Remove image_url from update to prevent overwriting custom images if we had photo upload
-            // For now, re-generating it is fine or just omit it. Let's omit image_url on update for safety if we had real images
-            const updateData = { ...facultyData };
-            delete (updateData as Partial<FacultyMember>).image_url;
-            result = await supabase
-                .from('faculty')
-                .update(updateData)
+            result = await (supabase.from('faculty') as any)
+                .update(facultyData as any)
                 .eq('id', editingId);
         } else {
-            result = await supabase
-                .from('faculty')
-                .insert([facultyData]);
+            result = await (supabase.from('faculty') as any)
+                .insert([facultyData as any]);
         }
 
         const { error } = result;
 
         if (error) {
-            alert(`Error ${editingId ? 'updating' : 'adding'} faculty member: ` + error.message);
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} faculty member: ` + error.message });
         } else {
+            setFormMessage({ type: 'success', text: `Faculty member successfully ${editingId ? 'updated' : 'added'}!` });
             setName('');
             setRole('');
             setCampusId('all');
             setEditingId(null);
             setShowForm(false);
             fetchFaculty();
+            setTimeout(() => setFormMessage(null), 3000);
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: number) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -119,16 +114,17 @@ const AdminFaculty: React.FC = () => {
     const confirmDelete = async () => {
         if (!idToDelete) return;
 
-        const { error } = await supabase
-            .from('faculty')
+        const { error } = await supabase.from('faculty')
             .delete()
             .eq('id', idToDelete);
 
         if (error) {
             console.error('Delete error:', error);
-            alert('Error deleting faculty member: ' + error.message);
+            setFormMessage({ type: 'error', text: 'Error deleting faculty member: ' + error.message });
         } else {
             fetchFaculty();
+            setFormMessage({ type: 'success', text: 'Faculty member deleted successfully.' });
+            setTimeout(() => setFormMessage(null), 3000);
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);
@@ -148,6 +144,12 @@ const AdminFaculty: React.FC = () => {
                     <Plus size={18} /> Add Faculty
                 </button>
             </div>
+
+            {formMessage && (
+                <div className={`p-4 rounded-xl text-sm border ${formMessage.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                    {formMessage.text}
+                </div>
+            )}
 
             {showForm && (
                 <div className="bg-stone-50 p-6 rounded-xl border border-stone-200 mb-6 animate-in slide-in-from-top-4 fade-in duration-200">
@@ -199,7 +201,7 @@ const AdminFaculty: React.FC = () => {
                                     className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none"
                                 >
                                     <option value="all">All Campuses</option>
-                                    {CAMPUSES.map(c => (
+                                    {campuses.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
                                 </select>
@@ -282,7 +284,7 @@ const AdminFaculty: React.FC = () => {
                                                     <span className="text-xs text-stone-500 uppercase tracking-wide font-medium">{member.role}</span>
                                                     {member.campus_id && (
                                                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 border border-stone-200">
-                                                            {CAMPUSES.find(c => c.id === member.campus_id)?.name || member.campus_id}
+                                                            {campuses.find(c => c.id === Number(member.campus_id))?.name || 'All Campuses'}
                                                         </span>
                                                     )}
                                                 </div>

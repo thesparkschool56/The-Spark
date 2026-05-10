@@ -1,0 +1,27 @@
+{
+  "collections": {
+    "projects": {
+      "schema": {
+        "id": "string",
+        "name": "string",
+        "description": "text",
+        "ownerId": "string",
+        "status": "string",
+        "jobsRequired": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "role": { "type": "string" },
+              "skills": { "type": "array", "items": { "type": "string" } }
+            },
+            "required": ["id", "role", "skills"]
+          }
+        },
+        "createdAt": "timestamp",
+        "updatedAt": "timestamp"
+      }
+    }
+  }
+}

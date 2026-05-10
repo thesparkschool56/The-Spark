@@ -150,7 +150,7 @@ const About: React.FC = () => {
                     </p>
                     <div className="flex justify-center gap-4">
                         <Link to="/admissions" className="bg-white text-primary px-8 py-3 rounded-full font-bold hover:bg-stone-50 transition-colors shadow-lg">
-                            Apply Now
+                            Enroll Now
                         </Link>
                         <Link to="/contact" className="border-2 border-white/30 text-white px-8 py-3 rounded-full font-bold hover:bg-white/10 transition-colors">
                             Contact Us

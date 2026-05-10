@@ -2,38 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Calendar as CalendarIcon, Edit2 } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
-import { CAMPUSES } from '../data';
 
-interface Event {
-    id: string;
-    title: string;
-    date: string;
-    category: 'Exam' | 'Sports' | 'Academic' | 'Holiday';
-    campus_id?: string;
-    time?: string;
-    location?: string;
-    general_info?: string;
-}
+import { Database } from '../lib/database.types';
+ 
+type Event = Database['public']['Tables']['events']['Row'];
 
 const AdminEvents: React.FC = () => {
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Form State
     const [title, setTitle] = useState('');
     const [date, setDate] = useState('');
-    const [category, setCategory] = useState<Event['category']>('Academic');
-    const [campusId, setCampusId] = useState('all'); // 'all' or specific campus ID
+    const [category, setCategory] = useState<string>('Academic');
+    const [campusId, setCampusId] = useState<string>('all'); // 'all' or specific campus ID
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [time, setTime] = useState('');
     const [location, setLocation] = useState('');
     const [generalInfo, setGeneralInfo] = useState('');
+    const [description, setDescription] = useState('');
+    const [imageUrl, setImageUrl] = useState('');
+    const [className, setClassName] = useState('');
+    const [section, setSection] = useState('');
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<string | null>(null);
+    const [idToDelete, setIdToDelete] = useState<number | null>(null);
+
+    const [campuses, setCampuses] = useState<{ id: number, name: string }[]>([]);
 
 
     const fetchEvents = React.useCallback(async () => {
@@ -49,8 +48,13 @@ const AdminEvents: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        const fetchCampuses = async () => {
+            const { data } = await supabase.from('campuses').select('id, name');
+            if (data) setCampuses(data);
+        };
         const init = async () => {
             await fetchEvents();
+            await fetchCampuses();
         };
         init();
     }, [fetchEvents]);
@@ -59,11 +63,15 @@ const AdminEvents: React.FC = () => {
         setEditingId(ev.id);
         setTitle(ev.title);
         setDate(ev.date);
-        setCategory(ev.category);
-        setCampusId(ev.campus_id || 'all');
+        setCategory(ev.category || 'Academic');
+        setCampusId(ev.campus_id ? String(ev.campus_id) : 'all');
         setTime(ev.time || '');
         setLocation(ev.location || '');
         setGeneralInfo(ev.general_info || '');
+        setDescription(ev.description || '');
+        setImageUrl(ev.image_url || '');
+        setClassName(ev.class_name || '');
+        setSection(ev.section || '');
         setShowForm(true);
     };
 
@@ -71,47 +79,55 @@ const AdminEvents: React.FC = () => {
         e.preventDefault();
         setSubmitting(true);
 
-        const eventData = {
+        const eventData: any = {
             title,
             date,
             category,
-            campus_id: campusId === 'all' ? null : campusId,
+            campus_id: campusId === 'all' ? null : Number(campusId),
             time,
             location,
-            general_info: generalInfo
+            description,
+            general_info: generalInfo,
+            image_url: imageUrl,
+            class_name: className,
+            section: section
         };
 
         let result;
         if (editingId) {
-            result = await supabase
-                .from('events')
+            result = await (supabase.from('events') as any)
                 .update(eventData)
                 .eq('id', editingId);
         } else {
-            result = await supabase
-                .from('events')
+            result = await (supabase.from('events') as any)
                 .insert([eventData]);
         }
 
         const { error } = result;
 
         if (error) {
-            alert(`Error ${editingId ? 'updating' : 'adding'} event: ` + error.message);
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} event: ` + error.message });
         } else {
+            setFormMessage({ type: 'success', text: `Event successfully ${editingId ? 'updated' : 'added'}!` });
             setTitle('');
             setDate('');
             setTime('');
             setLocation('');
             setGeneralInfo('');
+            setDescription('');
+            setImageUrl('');
+            setClassName('');
+            setSection('');
             setCampusId('all');
             setEditingId(null);
             setShowForm(false);
             fetchEvents();
+            setTimeout(() => setFormMessage(null), 3000);
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: number) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -120,20 +136,20 @@ const AdminEvents: React.FC = () => {
         if (!idToDelete) return;
 
         try {
-            const { error } = await supabase
-                .from('events')
+            const { error } = await supabase.from('events')
                 .delete()
                 .eq('id', idToDelete);
 
             if (error) {
                 console.error('Delete error:', error);
-                alert('Error deleting event: ' + error.message + ' (' + error.code + ')');
+                setFormMessage({ type: 'error', text: 'Error deleting event: ' + error.message });
             } else {
                 fetchEvents();
+                setFormMessage({ type: 'success', text: 'Event deleted successfully.' });
+                setTimeout(() => setFormMessage(null), 3000);
             }
-        } catch (err: unknown) {
-            const error = err as Error; // Type assertion for unknown error
-            alert('Error deleting event: ' + error.message);
+        } catch (err: any) {
+            setFormMessage({ type: 'error', text: 'Error deleting event: ' + err.message });
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);
@@ -153,6 +169,12 @@ const AdminEvents: React.FC = () => {
                     <Plus size={18} /> Add Event
                 </button>
             </div>
+
+            {formMessage && (
+                <div className={`p-4 rounded-xl text-sm border ${formMessage.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                    {formMessage.text}
+                </div>
+            )}
 
             {showForm && (
                 <div className="bg-stone-50 p-6 rounded-xl border border-stone-200 mb-6 animate-in slide-in-from-top-4 fade-in duration-200">
@@ -183,7 +205,7 @@ const AdminEvents: React.FC = () => {
                             <label className="block text-xs font-medium text-stone-500 mb-1">Category</label>
                             <select
                                 value={category}
-                                onChange={(e) => setCategory(e.target.value as Event['category'])}
+                                onChange={(e) => setCategory(e.target.value)}
                                 className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none"
                             >
                                 <option value="Academic">Academic</option>
@@ -220,17 +242,56 @@ const AdminEvents: React.FC = () => {
                                 className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none"
                             >
                                 <option value="all">All Campuses</option>
-                                {CAMPUSES.map(c => (
+                                {campuses.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
                         </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-medium text-stone-500 mb-1">Image URL</label>
+                            <input
+                                type="url"
+                                value={imageUrl}
+                                onChange={(e) => setImageUrl(e.target.value)}
+                                className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none"
+                                placeholder="https://images.unsplash.com/..."
+                            />
+                        </div>
+                        <div className="md:col-span-1">
+                            <label className="block text-xs font-medium text-stone-500 mb-1">Class Name</label>
+                            <input
+                                type="text"
+                                value={className}
+                                onChange={(e) => setClassName(e.target.value)}
+                                className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none"
+                                placeholder="E.g., Grade 10"
+                            />
+                        </div>
+                        <div className="md:col-span-1">
+                            <label className="block text-xs font-medium text-stone-500 mb-1">Section</label>
+                            <input
+                                type="text"
+                                value={section}
+                                onChange={(e) => setSection(e.target.value)}
+                                className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none"
+                                placeholder="E.g., Section A"
+                            />
+                        </div>
                         <div className="md:col-span-4">
-                            <label className="block text-xs font-medium text-stone-500 mb-1">General Info / Message</label>
+                            <label className="block text-xs font-medium text-stone-500 mb-1">Short Description (Summary)</label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px]"
+                                placeholder="A brief summary for the marquee and overview..."
+                            />
+                        </div>
+                        <div className="md:col-span-4">
+                            <label className="block text-xs font-medium text-stone-500 mb-1">General Info / Guidelines</label>
                             <textarea
                                 value={generalInfo}
                                 onChange={(e) => setGeneralInfo(e.target.value)}
-                                className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none min-h-[100px]"
+                                className="w-full p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-primary/20 outline-none min-h-[120px]"
                                 placeholder="Additional details, expectations, or instructions..."
                             />
                         </div>

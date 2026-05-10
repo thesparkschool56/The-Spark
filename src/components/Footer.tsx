@@ -6,11 +6,11 @@ const Footer: React.FC = () => {
     return (
         <footer className="bg-background-dark text-white pt-16 pb-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
                     <div>
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="bg-white p-1 rounded-lg w-10 h-10 flex items-center justify-center overflow-hidden">
-                                <img src="/sp.jpg" alt="The Spark Logo" className="w-full h-full object-contain" />
+                            <div className="bg-white p-1 rounded-full w-10 h-10 flex items-center justify-center overflow-hidden">
+                                <img src="/sp.jpg" alt="The Spark Logo" className="w-full h-full object-cover rounded-full" />
                             </div>
                             <h3 className="font-serif text-2xl font-bold">The Spark</h3>
                         </div>
@@ -40,12 +40,12 @@ const Footer: React.FC = () => {
                     <div>
                         <h4 className="font-serif text-lg font-bold mb-6 text-accent">Campuses</h4>
                         <ul className="space-y-3 text-sm text-slate-400">
-                            <li><Link to="/campus/north" className="hover:text-white transition-colors">North Campus</Link></li>
-                            <li><Link to="/campus/city" className="hover:text-white transition-colors">City Campus</Link></li>
-                            <li><Link to="/campus/wings" className="hover:text-white transition-colors">International Wing</Link></li>
-                            <li><Link to="/campus/science" className="hover:text-white transition-colors">Science Park</Link></li>
-                            <li><Link to="/campus/arts" className="hover:text-white transition-colors">Arts District</Link></li>
-                            <li><Link to="/campus/sports" className="hover:text-white transition-colors">Sports Academy</Link></li>
+                            <li><Link to="/campus/jinnah" className="hover:text-white transition-colors">Jinnah Campus</Link></li>
+                            <li><Link to="/campus/shebaz" className="hover:text-white transition-colors">Shebaz Campus</Link></li>
+                            <li><Link to="/campus/ghazali" className="hover:text-white transition-colors">Ghazali Campus</Link></li>
+                            <li><Link to="/campus/latif" className="hover:text-white transition-colors">Latif Campus</Link></li>
+                            <li><Link to="/campus/sachal" className="hover:text-white transition-colors">Sachal Campus</Link></li>
+                            <li><Link to="/campus/iqbal" className="hover:text-white transition-colors">Iqbal Campus</Link></li>
                         </ul>
                     </div>
 

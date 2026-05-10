@@ -3,13 +3,9 @@ import { supabase } from '../lib/supabase';
 import { Plus, Trash2, MessageSquare, Star, Edit2 } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-interface Review {
-    id: string;
-    name: string;
-    role: string;
-    text: string;
-    rating: number; // For future use if we add ratings
-}
+import { Database } from '../lib/database.types';
+
+type Review = Database['public']['Tables']['reviews']['Row'];
 
 const AdminReviews: React.FC = () => {
     const [reviews, setReviews] = useState<Review[]>([]);
@@ -21,17 +17,18 @@ const AdminReviews: React.FC = () => {
     const [role, setRole] = useState('');
     const [text, setText] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<string | null>(null);
+    const [idToDelete, setIdToDelete] = useState<number | null>(null);
 
     const handleEdit = (review: Review) => {
         setEditingId(review.id);
-        setName(review.name);
-        setRole(review.role);
-        setText(review.text);
+        setName(review.reviewer_name);
+        setRole(review.role || '');
+        setText(review.review_text);
         setShowForm(true);
     };
 
@@ -58,36 +55,41 @@ const AdminReviews: React.FC = () => {
         e.preventDefault();
         setSubmitting(true);
 
-        const reviewData = { name, role, text };
+        const reviewData: any = { 
+            reviewer_name: name, 
+            review_text: text,
+            role,
+            is_published: true
+        };
 
         let result;
         if (editingId) {
-            result = await supabase
-                .from('reviews')
+            result = await (supabase.from('reviews') as any)
                 .update(reviewData)
                 .eq('id', editingId);
         } else {
-            result = await supabase
-                .from('reviews')
+            result = await (supabase.from('reviews') as any)
                 .insert([reviewData]);
         }
 
         const { error } = result;
 
         if (error) {
-            alert(`Error ${editingId ? 'updating' : 'adding'} review: ` + error.message);
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} review: ` + error.message });
         } else {
+            setFormMessage({ type: 'success', text: `Review successfully ${editingId ? 'updated' : 'added'}!` });
             setName('');
             setRole('');
             setText('');
             setEditingId(null);
             setShowForm(false);
             fetchReviews();
+            setTimeout(() => setFormMessage(null), 3000);
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: number) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -95,16 +97,17 @@ const AdminReviews: React.FC = () => {
     const confirmDelete = async () => {
         if (!idToDelete) return;
 
-        const { error } = await supabase
-            .from('reviews')
+        const { error } = await supabase.from('reviews')
             .delete()
             .eq('id', idToDelete);
 
         if (error) {
             console.error('Delete error:', error);
-            alert('Error deleting review: ' + error.message);
+            setFormMessage({ type: 'error', text: 'Error deleting review: ' + error.message });
         } else {
             fetchReviews();
+            setFormMessage({ type: 'success', text: 'Review deleted successfully.' });
+            setTimeout(() => setFormMessage(null), 3000);
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);
@@ -124,6 +127,12 @@ const AdminReviews: React.FC = () => {
                     <Plus size={18} /> Add Review
                 </button>
             </div>
+
+            {formMessage && (
+                <div className={`p-4 rounded-xl text-sm border ${formMessage.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                    {formMessage.text}
+                </div>
+            )}
 
             {showForm && (
                 <div className="bg-stone-50 p-6 rounded-xl border border-stone-200 mb-6 animate-in slide-in-from-top-4 fade-in duration-200">
@@ -199,11 +208,13 @@ const AdminReviews: React.FC = () => {
                             <div className="flex gap-1 mb-3 text-amber-500">
                                 {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
                             </div>
-                            <p className="text-stone-600 italic text-sm mb-4 leading-relaxed">"{review.text}"</p>
-                            <div className="flex justify-between items-end">
-                                <h5 className="font-bold text-stone-900 text-sm">{review.name}</h5>
-                                <span className="text-xs text-stone-500 uppercase tracking-wide">{review.role}</span>
-                            </div>
+                             <p className="text-stone-600 italic text-sm mb-4 leading-relaxed">"{review.review_text}"</p>
+                             <div className="flex justify-between items-end">
+                                 <div>
+                                     <h5 className="font-bold text-stone-900 text-sm">{review.reviewer_name}</h5>
+                                     <p className="text-[10px] text-stone-400 font-bold uppercase">{review.role}</p>
+                                 </div>
+                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                     onClick={() => handleEdit(review)}
