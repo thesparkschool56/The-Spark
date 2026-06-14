@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, set, push, update, remove, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Plus, Trash2, User, UserPlus, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-interface FacultyMember {
-    id: number;
+export interface FacultyMember {
+    id: string;
     name: string;
     role: string;
     section: 'PG - Class 2' | 'Class 3 - 5' | 'Class 6 - 8' | 'Class 9 - 10/12';
     image_url?: string;
-    campus_id?: number | null;
+    campus_id?: string | number | null;
 }
 
 const AdminFaculty: React.FC = () => {
@@ -25,38 +26,57 @@ const AdminFaculty: React.FC = () => {
     const [section, setSection] = useState<'PG - Class 2' | 'Class 3 - 5' | 'Class 6 - 8' | 'Class 9 - 10/12'>('PG - Class 2');
     const [campusId, setCampusId] = useState('all');
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<number | null>(null);
+    const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
-    const [campuses, setCampuses] = useState<{ id: number, name: string }[]>([]);
+    const [campuses, setCampuses] = useState<{ id: string | number, name: string }[]>([]);
 
-    const fetchFaculty = React.useCallback(async () => {
+    useEffect(() => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('faculty')
-            .select('*')
-            .order('created_at', { ascending: true });
+        const facultyRef = ref(db, 'faculty');
+        
+        const unsubscribeFaculty = onValue(facultyRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as FacultyMember[];
+                setFaculty(dataArray);
+            } else {
+                setFaculty([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching faculty:', error);
+            setLoading(false);
+        });
 
-        if (data) setFaculty(data as FacultyMember[]);
-        if (error) console.error('Error fetching faculty:', error);
-        setLoading(false);
+        return () => unsubscribeFaculty();
     }, []);
 
     useEffect(() => {
         const fetchCampuses = async () => {
-            const { data } = await supabase.from('campuses').select('id, name');
-            if (data) setCampuses(data);
+            try {
+                const snapshot = await get(ref(db, 'campuses'));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                        id: Number(id) || id,
+                        name: val.name || val
+                    })) as any[];
+                    setCampuses(dataArray);
+                }
+            } catch (error) {
+                console.error(error);
+            }
         };
-        const init = async () => {
-            await fetchFaculty();
-            await fetchCampuses();
-        };
-        init();
-    }, [fetchFaculty]);
+        fetchCampuses();
+    }, []);
 
     const handleEdit = (member: FacultyMember) => {
         setEditingId(member.id);
@@ -69,44 +89,46 @@ const AdminFaculty: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!name.trim() || !role.trim()) {
+            setFormMessage({ type: 'error', text: 'Name and Role are required fields.' });
+            return;
+        }
+        
         setSubmitting(true);
 
         const facultyData = {
             name,
             role,
             section,
-            campus_id: campusId === 'all' ? null : Number(campusId),
+            campus_id: campusId === 'all' ? null : campusId,
             image_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random` // Default placeholder
         };
 
-        let result;
-        if (editingId) {
-            result = await (supabase.from('faculty') as any)
-                .update(facultyData as any)
-                .eq('id', editingId);
-        } else {
-            result = await (supabase.from('faculty') as any)
-                .insert([facultyData as any]);
-        }
+        try {
+            if (editingId) {
+                const facultyRef = ref(db, `faculty/${editingId}`);
+                await update(facultyRef, facultyData);
+            } else {
+                const facultyRefList = ref(db, 'faculty');
+                const newFacultyRef = push(facultyRefList);
+                await set(newFacultyRef, facultyData);
+            }
 
-        const { error } = result;
-
-        if (error) {
-            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} faculty member: ` + error.message });
-        } else {
             setFormMessage({ type: 'success', text: `Faculty member successfully ${editingId ? 'updated' : 'added'}!` });
             setName('');
             setRole('');
             setCampusId('all');
             setEditingId(null);
             setShowForm(false);
-            fetchFaculty();
             setTimeout(() => setFormMessage(null), 3000);
+        } catch (error: any) {
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} faculty member: ` + error.message });
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -114,17 +136,15 @@ const AdminFaculty: React.FC = () => {
     const confirmDelete = async () => {
         if (!idToDelete) return;
 
-        const { error } = await supabase.from('faculty')
-            .delete()
-            .eq('id', idToDelete);
+        try {
+            const facultyRef = ref(db, `faculty/${idToDelete}`);
+            await remove(facultyRef);
 
-        if (error) {
-            console.error('Delete error:', error);
-            setFormMessage({ type: 'error', text: 'Error deleting faculty member: ' + error.message });
-        } else {
-            fetchFaculty();
             setFormMessage({ type: 'success', text: 'Faculty member deleted successfully.' });
             setTimeout(() => setFormMessage(null), 3000);
+        } catch (error: any) {
+            console.error('Delete error:', error);
+            setFormMessage({ type: 'error', text: 'Error deleting faculty member: ' + error.message });
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);

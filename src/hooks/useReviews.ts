@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 
 export interface Review {
   id: string;
@@ -17,23 +18,35 @@ export const useReviews = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchReviews = async () => {
+    const reviewsRef = ref(db, 'reviews');
+    const unsubscribe = onValue(reviewsRef, (snapshot) => {
       try {
-        const { data, error } = await supabase
-          .from('reviews')
-          .select('*')
-          .eq('is_published', true)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setReviews(data || []);
+        const data = snapshot.val();
+        if (data) {
+          const dataArray = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+          })) as Review[];
+          
+          const publishedReviews = dataArray
+            .filter(r => r.is_published)
+            .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            
+          setReviews(publishedReviews);
+        } else {
+          setReviews([]);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
-    };
-    fetchReviews();
+    }, (err) => {
+      setError(err.message);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return { reviews, loading, error };

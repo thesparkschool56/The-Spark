@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, set, push, update, remove, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Plus, Trash2, MessageSquare, Star, Edit2 } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-import { Database } from '../lib/database.types';
-
-type Review = Database['public']['Tables']['reviews']['Row'];
+export interface Review {
+    id: string;
+    reviewer_name: string;
+    role: string;
+    review_text: string;
+    is_published: boolean;
+    created_at: string;
+}
 
 const AdminReviews: React.FC = () => {
     const [reviews, setReviews] = useState<Review[]>([]);
@@ -17,12 +23,12 @@ const AdminReviews: React.FC = () => {
     const [role, setRole] = useState('');
     const [text, setText] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<number | null>(null);
+    const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
     const handleEdit = (review: Review) => {
         setEditingId(review.id);
@@ -32,64 +38,73 @@ const AdminReviews: React.FC = () => {
         setShowForm(true);
     };
 
-    const fetchReviews = React.useCallback(async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('reviews')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (data) setReviews(data);
-        if (error) console.log('Error fetching reviews:', error.message);
-        setLoading(false);
-    }, []);
-
     useEffect(() => {
-        const init = async () => {
-            await fetchReviews();
-        };
-        init();
-    }, [fetchReviews]);
+        setLoading(true);
+        const reviewsRef = ref(db, 'reviews');
+        
+        const unsubscribe = onValue(reviewsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as Review[];
+                dataArray.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                setReviews(dataArray);
+            } else {
+                setReviews([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching reviews:', error.message);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!name.trim() || !text.trim()) {
+            setFormMessage({ type: 'error', text: 'Reviewer Name and Review Text are required fields.' });
+            return;
+        }
+        
         setSubmitting(true);
 
         const reviewData: any = { 
             reviewer_name: name, 
             review_text: text,
             role,
-            is_published: true
+            is_published: true,
+            created_at: new Date().toISOString()
         };
 
-        let result;
-        if (editingId) {
-            result = await (supabase.from('reviews') as any)
-                .update(reviewData)
-                .eq('id', editingId);
-        } else {
-            result = await (supabase.from('reviews') as any)
-                .insert([reviewData]);
-        }
+        try {
+            if (editingId) {
+                const reviewRef = ref(db, `reviews/${editingId}`);
+                await update(reviewRef, reviewData);
+            } else {
+                const reviewsRef = ref(db, 'reviews');
+                const newReviewRef = push(reviewsRef);
+                await set(newReviewRef, reviewData);
+            }
 
-        const { error } = result;
-
-        if (error) {
-            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} review: ` + error.message });
-        } else {
             setFormMessage({ type: 'success', text: `Review successfully ${editingId ? 'updated' : 'added'}!` });
             setName('');
             setRole('');
             setText('');
             setEditingId(null);
             setShowForm(false);
-            fetchReviews();
             setTimeout(() => setFormMessage(null), 3000);
+        } catch (error: any) {
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} review: ` + error.message });
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -97,17 +112,15 @@ const AdminReviews: React.FC = () => {
     const confirmDelete = async () => {
         if (!idToDelete) return;
 
-        const { error } = await supabase.from('reviews')
-            .delete()
-            .eq('id', idToDelete);
+        try {
+            const reviewRef = ref(db, `reviews/${idToDelete}`);
+            await remove(reviewRef);
 
-        if (error) {
-            console.error('Delete error:', error);
-            setFormMessage({ type: 'error', text: 'Error deleting review: ' + error.message });
-        } else {
-            fetchReviews();
             setFormMessage({ type: 'success', text: 'Review deleted successfully.' });
             setTimeout(() => setFormMessage(null), 3000);
+        } catch (error: any) {
+            console.error('Delete error:', error);
+            setFormMessage({ type: 'error', text: 'Error deleting review: ' + error.message });
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);

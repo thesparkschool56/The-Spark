@@ -1,18 +1,20 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Users, Calendar, MessageSquare, LogOut, GraduationCap, Contact, Mail, Briefcase, Trophy } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 const AdminLayout: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
+        try {
+            await signOut(auth);
+            navigate('/login');
+        } catch (error: any) {
             console.error('Error signing out:', error.message);
         }
-        navigate('/login');
     };
 
     const menuItems = [

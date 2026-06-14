@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Loader2, ShieldCheck } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 const AdminLogin: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -11,11 +12,10 @@ const AdminLogin: React.FC = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) navigate('/admin');
-        };
-        checkSession();
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) navigate('/admin');
+        });
+        return () => unsubscribe();
     }, [navigate]);
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -24,16 +24,8 @@ const AdminLogin: React.FC = () => {
         setError(null);
 
         try {
-            const { error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (authError) {
-                setError(authError.message);
-            } else {
-                navigate('/admin');
-            }
+            await signInWithEmailAndPassword(auth, email, password);
+            navigate('/admin');
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred.');
         } finally {
@@ -102,7 +94,7 @@ const AdminLogin: React.FC = () => {
                 </div>
 
                 <p className="text-center mt-8 text-xs text-stone-400">
-                    Protected by Supabase Auth System • {new Date().getFullYear()}
+                    Protected by Firebase Auth System • {new Date().getFullYear()}
                 </p>
             </div>
         </div>

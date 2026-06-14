@@ -10,7 +10,8 @@ import {
     Briefcase
 } from 'lucide-react';
 
-import { supabase } from '../lib/supabase';
+import { ref, get, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import SplitText from '../components/ui/SplitText';
 import ShinyText from '../components/ui/ShinyText';
 import Carousel from '../components/ui/Carousel';
@@ -26,53 +27,33 @@ const Landing: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // Fetch Founders - Pruned
-                const { data: foundersData } = await supabase
-                    .from('founders')
-                    .select('name, role, quote, bio, image_url, order')
-                    .order('order', { ascending: true });
-                setFounders(foundersData || []);
+        const refs = [
+            { ref: ref(db, 'founders'), setter: setFounders, process: (dataArray: any[]) => dataArray.sort((a, b) => (a.order || 0) - (b.order || 0)) },
+            { ref: ref(db, 'events'), setter: setEvents, process: (dataArray: any[]) => { dataArray.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); return dataArray.slice(0, 4); } },
+            { ref: ref(db, 'reviews'), setter: setReviews, process: (dataArray: any[]) => dataArray.filter(r => r.is_published).slice(0, 5) },
+            { ref: ref(db, 'campuses'), setter: setCampuses, process: (dataArray: any[]) => dataArray },
+            { ref: ref(db, 'job_positions'), setter: setVacancies, process: (dataArray: any[]) => { const filtered = dataArray.filter(v => v.status === 'Open'); filtered.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()); return filtered.slice(0, 3); } }
+        ];
 
-                // Fetch Events - Pruned & Limited to 4
-                const { data: eventsData } = await supabase
-                    .from('events')
-                    .select('id, title, date, image_url, category')
-                    .order('date', { ascending: true })
-                    .limit(4);
-                setEvents(eventsData || []);
+        const unsubscribes = refs.map(({ ref, setter, process }) => {
+            return onValue(ref, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    let dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
+                    setter(process(dataArray));
+                } else {
+                    setter([]);
+                }
+            }, (error) => {
+                console.error("Error fetching data:", error);
+            });
+        });
+        
+        setLoading(false);
 
-                // Fetch Reviews - Correct Schema
-                const { data: reviewsData } = await supabase
-                    .from('reviews')
-                    .select('id, reviewer_name, review_text, role, campus_id')
-                    .eq('is_published', true)
-                    .limit(5);
-                setReviews(reviewsData || []);
-
-                // Fetch Campuses
-                const { data: campusesData } = await supabase
-                    .from('campuses')
-                    .select('*')
-                    .order('id', { ascending: true });
-                setCampuses(campusesData || []);
-
-                // Fetch Vacancies - Limited to 3
-                const { data: vacanciesData } = await supabase
-                    .from('job_positions')
-                    .select('*')
-                    .eq('status', 'Open')
-                    .order('created_at', { ascending: false })
-                    .limit(3);
-                setVacancies(vacanciesData || []);
-            } catch (error) {
-                console.error("Error fetching landing data", error);
-            } finally {
-                setLoading(false);
-            }
+        return () => {
+            unsubscribes.forEach(unsub => unsub());
         };
-        fetchData();
     }, []);
 
     if (loading) {
@@ -418,7 +399,7 @@ const Landing: React.FC = () => {
                         <span className="text-primary font-bold tracking-[0.4em] uppercase text-[10px] mb-2 block">Careers</span>
                         <h2 className="text-4xl md:text-6xl font-serif text-stone-900 uppercase tracking-tight">Join Our Faculty</h2>
                     </div>
-                    <Link to="/careers" className="flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all uppercase tracking-widest text-[10px] bg-stone-50 px-6 py-3 rounded-full border border-stone-100">
+                    <Link to="/vacancies" className="flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all uppercase tracking-widest text-[10px] bg-stone-50 px-6 py-3 rounded-full border border-stone-100">
                         View All Positions <ArrowRight size={14} />
                     </Link>
                 </div>
@@ -440,7 +421,7 @@ const Landing: React.FC = () => {
                                 </div>
                                 <p className="text-stone-500 text-sm line-clamp-3 mb-8">{job?.description}</p>
                             </div>
-                            <Link to="/careers" className="w-full bg-stone-900 text-white text-center py-4 rounded-xl font-bold hover:bg-black transition-all text-xs uppercase tracking-widest mt-auto">
+                            <Link to="/vacancies" className="w-full bg-stone-900 text-white text-center py-4 rounded-xl font-bold hover:bg-black transition-all text-xs uppercase tracking-widest mt-auto">
                                 Apply Now
                             </Link>
                         </div>

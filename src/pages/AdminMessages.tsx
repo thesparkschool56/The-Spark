@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, update, remove, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Trash2, Mail, CheckCircle, Clock } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-import { Database } from '../lib/database.types';
-
-type Message = Database['public']['Tables']['messages']['Row'];
+export interface Message {
+    id: string;
+    sender_name: string;
+    email: string;
+    subject?: string;
+    message_body: string;
+    is_read: boolean;
+    created_at: string;
+}
 
 const AdminMessages: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -14,32 +21,35 @@ const AdminMessages: React.FC = () => {
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<number | null>(null);
-
-    const fetchMessages = React.useCallback(async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching messages:', error);
-            setActionMessage({ type: 'error', text: 'Error fetching messages: ' + error.message });
-        } else {
-            setMessages(data || []);
-        }
-        setLoading(false);
-    }, []);
+    const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        const init = async () => {
-            await fetchMessages();
-        };
-        init();
-    }, [fetchMessages]);
+        setLoading(true);
+        const messagesRef = ref(db, 'messages');
+        
+        const unsubscribe = onValue(messagesRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as Message[];
+                dataArray.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                setMessages(dataArray);
+            } else {
+                setMessages([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching messages:', error);
+            setActionMessage({ type: 'error', text: 'Error fetching messages: ' + error.message });
+            setLoading(false);
+        });
 
-    const handleDelete = async (id: number) => {
+        return () => unsubscribe();
+    }, []);
+
+    const handleDelete = async (id: string) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -47,31 +57,26 @@ const AdminMessages: React.FC = () => {
     const confirmDelete = async () => {
         if (!idToDelete) return;
 
-        const { error } = await supabase.from('messages')
-            .delete()
-            .eq('id', idToDelete);
+        try {
+            const messageRef = ref(db, `messages/${idToDelete}`);
+            await remove(messageRef);
 
-        if (error) {
-            console.error('Delete error:', error);
-            setActionMessage({ type: 'error', text: 'Error deleting message: ' + error.message });
-        } else {
-            fetchMessages();
             setActionMessage({ type: 'success', text: 'Message deleted successfully.' });
             setTimeout(() => setActionMessage(null), 3000);
+        } catch (error: any) {
+            console.error('Delete error:', error);
+            setActionMessage({ type: 'error', text: 'Error deleting message: ' + error.message });
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);
     };
 
-    const handleToggleRead = async (id: number, currentReadStatus: boolean) => {
-        const { error } = await (supabase.from('messages') as any)
-            .update({ is_read: !currentReadStatus })
-            .eq('id', id);
-
-        if (error) {
+    const handleToggleRead = async (id: string, currentReadStatus: boolean) => {
+        try {
+            const messageRef = ref(db, `messages/${id}`);
+            await update(messageRef, { is_read: !currentReadStatus });
+        } catch (error: any) {
             setActionMessage({ type: 'error', text: 'Error updating status: ' + error.message });
-        } else {
-            fetchMessages();
         }
     };
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../lib/supabase';
+import { ref, get, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import ShinyText from '../components/ui/ShinyText';
 import { User } from 'lucide-react';
 
@@ -11,22 +12,29 @@ const Team: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchFaculty = async () => {
-            try {
-                const { data, error } = await supabase.from('faculty')
-                    .select('*')
-                    .order('created_at', { ascending: true });
-
-                if (data) setFaculty(data);
-                if (error) console.error('Error fetching faculty:', error);
-            } catch (err) {
-                console.error(err);
-            } finally {
+        const fetchFaculty = () => {
+            const facultyRef = ref(db, 'faculty');
+            setLoading(true);
+            const unsubscribe = onValue(facultyRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
+                    dataArray.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+                    setFaculty(dataArray);
+                } else {
+                    setFaculty([]);
+                }
                 setLoading(false);
-            }
+            }, (error) => {
+                console.error(error);
+                setLoading(false);
+            });
+
+            return unsubscribe;
         };
 
-        fetchFaculty();
+        const unsubscribe = fetchFaculty();
+        return () => unsubscribe();
     }, []);
 
     const sections = ['PG - Class 2', 'Class 3 - 5', 'Class 6 - 8', 'Class 9 - 10/12'];

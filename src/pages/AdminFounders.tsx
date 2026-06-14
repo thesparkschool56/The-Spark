@@ -1,23 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, set, push, update, remove, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Plus, Trash2, Edit2, Loader2, Quote, User } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-import { Database } from '../lib/database.types';
-
-type Founder = Database['public']['Tables']['founders']['Row'];
+export interface Founder {
+    id: string;
+    name: string;
+    role: string;
+    bio: string;
+    image_url: string;
+    order: number;
+}
 
 const AdminFounders: React.FC = () => {
     const [founders, setFounders] = useState<Founder[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<number | null>(null);
+    const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
     // Form inputs
     const [name, setName] = useState('');
@@ -25,27 +31,30 @@ const AdminFounders: React.FC = () => {
     const [quote, setQuote] = useState('');
     const [imageUrl, setImageUrl] = useState('');
 
-    const fetchFounders = React.useCallback(async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('founders')
-            .select('*')
-            .order('order', { ascending: true });
-
-        if (error) {
-            console.error('Error fetching founders:', error);
-        } else {
-            setFounders(data || []);
-        }
-        setLoading(false);
-    }, []);
-
     useEffect(() => {
-        const init = async () => {
-            await fetchFounders();
-        };
-        init();
-    }, [fetchFounders]);
+        setLoading(true);
+        const foundersRef = ref(db, 'founders');
+        
+        const unsubscribe = onValue(foundersRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as Founder[];
+                dataArray.sort((a, b) => (a.order || 0) - (b.order || 0));
+                setFounders(dataArray);
+            } else {
+                setFounders([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching founders:', error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const handleEdit = (founder: Founder) => {
         setEditingId(founder.id);
@@ -58,31 +67,32 @@ const AdminFounders: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!name.trim() || !role.trim()) {
+            setFormMessage({ type: 'error', text: 'Name and Role are required fields.' });
+            return;
+        }
+        
         setSubmitting(true);
 
         const founderData = {
             name,
             role,
             bio: quote,
-            image_url: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+            image_url: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            order: founders.length // just append to end for simplicity
         };
 
-        let result;
-        if (editingId) {
-            result = await (supabase.from('founders') as any)
-                .update(founderData as any)
-                .eq('id', editingId);
-        } else {
-            result = await (supabase.from('founders') as any)
-                .insert([founderData as any]);
-        }
+        try {
+            if (editingId) {
+                const founderRef = ref(db, `founders/${editingId}`);
+                await update(founderRef, founderData);
+            } else {
+                const foundersRef = ref(db, 'founders');
+                const newFounderRef = push(foundersRef);
+                await set(newFounderRef, founderData);
+            }
 
-        const { error } = result;
-
-        if (error) {
-            console.error('Error saving founder:', error);
-            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} founder: ` + error.message });
-        } else {
             setFormMessage({ type: 'success', text: `Founder successfully ${editingId ? 'updated' : 'added'}!` });
             setName('');
             setRole('');
@@ -90,13 +100,15 @@ const AdminFounders: React.FC = () => {
             setImageUrl('');
             setEditingId(null);
             setShowForm(false);
-            fetchFounders();
             setTimeout(() => setFormMessage(null), 3000);
+        } catch (error: any) {
+            console.error('Error saving founder:', error);
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} founder: ` + error.message });
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -104,17 +116,15 @@ const AdminFounders: React.FC = () => {
     const confirmDelete = async () => {
         if (!idToDelete) return;
 
-        const { error } = await supabase.from('founders')
-            .delete()
-            .eq('id', idToDelete);
+        try {
+            const founderRef = ref(db, `founders/${idToDelete}`);
+            await remove(founderRef);
 
-        if (error) {
-            console.error('Delete error:', error);
-            setFormMessage({ type: 'error', text: 'Error deleting founder: ' + error.message });
-        } else {
-            fetchFounders();
             setFormMessage({ type: 'success', text: 'Founder deleted successfully.' });
             setTimeout(() => setFormMessage(null), 3000);
+        } catch (error: any) {
+            console.error('Delete error:', error);
+            setFormMessage({ type: 'error', text: 'Error deleting founder: ' + error.message });
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);

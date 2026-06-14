@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 
 export interface HouseScore {
   id: string;
@@ -14,43 +15,28 @@ export const useScoreboard = (campusId: string) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getInitialScores = async () => {
-      const { data } = await supabase
-        .from('scoreboard')
-        .select('*')
-        .eq('campus_id', campusId);
-      setScores(data || []);
+    const scoreboardRef = ref(db, 'scoreboard');
+    const unsubscribe = onValue(scoreboardRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const dataArray = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        })) as HouseScore[];
+        
+        // Filter by campusId
+        const filtered = dataArray.filter(s => String(s.campus_id) === String(campusId));
+        setScores(filtered);
+      } else {
+        setScores([]);
+      }
       setLoading(false);
-    };
-    getInitialScores();
+    }, (err) => {
+      console.error(err);
+      setLoading(false);
+    });
 
-    const channel = supabase
-      .channel(`public:scoreboard:${campusId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'scoreboard' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newScore = payload.new as HouseScore;
-            if (String(newScore.campus_id) === campusId) {
-              setScores(prev => [...prev, newScore]);
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as HouseScore;
-            if (String(updated.campus_id) === campusId) {
-              setScores(prev => prev.map(s => s.id === updated.id ? updated : s));
-            }
-          } else if (payload.eventType === 'DELETE') {
-            const oldId = payload.old.id;
-            setScores(prev => prev.filter(s => s.id !== oldId));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, [campusId]);
 
   return { scores, loading };

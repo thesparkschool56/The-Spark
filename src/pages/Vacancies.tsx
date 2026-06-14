@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, Loader2, Send, X, CheckCircle2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { ref, get, push, set, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
  
 interface JobPosition {
     id: string;
@@ -33,19 +34,26 @@ const Vacancies: React.FC = () => {
     });
 
     useEffect(() => {
-        fetchJobs();
-    }, []);
-
-    const fetchJobs = async () => {
+        const jobsRef = ref(db, 'job_positions');
         setLoading(true);
-        const { data, error } = await supabase
-            .from('job_positions')
-            .select('*')
-            .eq('status', 'Open');
-        
-        if (!error && data) setJobs(data);
-        setLoading(false);
-    };
+        const unsubscribe = onValue(jobsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data)
+                    .map(([id, val]: [string, any]) => ({ id, ...val }))
+                    .filter(job => job.status === 'Open');
+                setJobs(dataArray as JobPosition[]);
+            } else {
+                setJobs([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error(error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const handleApply = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,20 +61,20 @@ const Vacancies: React.FC = () => {
         setIsSubmitting(true);
 
         try {
-            const { error } = await (supabase.from('job_applicants') as any)
-                .insert([{
-                    job_id: selectedJob.id,
-                    full_name: applicantData.name,
-                    email: applicantData.email,
-                    age: applicantData.age ? parseInt(applicantData.age) : null,
-                    degree: applicantData.degree,
-                    education: applicantData.education,
-                    department: applicantData.department,
-                    resume_url: applicantData.resume_url,
-                    status: 'Pending'
-                } as any]);
-
-            if (error) throw error;
+            const applicantsRef = ref(db, 'job_applicants');
+            const newApplicantRef = push(applicantsRef);
+            await set(newApplicantRef, {
+                job_id: selectedJob.id,
+                full_name: applicantData.name,
+                email: applicantData.email,
+                age: applicantData.age ? parseInt(applicantData.age) : null,
+                degree: applicantData.degree,
+                education: applicantData.education,
+                department: applicantData.department,
+                resume_url: applicantData.resume_url,
+                status: 'Pending',
+                created_at: new Date().toISOString()
+            });
             setSuccess(true);
             setTimeout(() => {
                 setShowApplyModal(false);

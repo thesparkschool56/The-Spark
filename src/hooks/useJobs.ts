@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 
 export interface JobPosition {
-  id: number;
+  id: string;
   title: string;
   description: string;
   department: string;
@@ -17,23 +18,35 @@ export const useJobs = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchJobs = async () => {
+    const jobsRef = ref(db, 'job_positions');
+    const unsubscribe = onValue(jobsRef, (snapshot) => {
       try {
-        const { data, error } = await supabase
-          .from('job_positions')
-          .select('*')
-          .eq('status', 'Open')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setJobs(data || []);
+        const data = snapshot.val();
+        if (data) {
+          const dataArray = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+          })) as JobPosition[];
+          
+          const openJobs = dataArray
+            .filter(j => j.status === 'Open')
+            .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            
+          setJobs(openJobs);
+        } else {
+          setJobs([]);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
-    };
-    fetchJobs();
+    }, (err) => {
+      setError(err.message);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return { jobs, loading, error };

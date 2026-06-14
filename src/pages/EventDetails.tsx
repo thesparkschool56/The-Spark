@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ArrowLeft, Loader2, Info, School } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { ref, get } from 'firebase/database';
+import { db } from '../lib/firebase';
 
 const EventDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -10,18 +11,18 @@ const EventDetails: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchEvent = async () => {
-            setLoading(true);
-            const { data } = await supabase
-                .from('events')
-                .select('*')
-                .eq('id', Number(id))
-                .single();
-
-            if (data) setEvent(data);
+        const eventRef = ref(db, `events/${id}`);
+        setLoading(true);
+        const unsubscribe = onValue(eventRef, (snapshot) => {
+            if (snapshot.exists()) {
+                setEvent({ id, ...snapshot.val() });
+            } else {
+                setEvent(null);
+            }
             setLoading(false);
-        };
-        fetchEvent();
+        });
+
+        return () => unsubscribe();
     }, [id]);
 
     if (loading) return (

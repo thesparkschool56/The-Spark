@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, set, push, update, remove, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Plus, Trash2, Calendar as CalendarIcon, Edit2 } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-import { Database } from '../lib/database.types';
- 
-type Event = Database['public']['Tables']['events']['Row'];
+export interface Event {
+    id: string;
+    title: string;
+    date: string;
+    category?: string;
+    campus_id?: string | number | null;
+    time?: string;
+    location?: string;
+    description?: string;
+    general_info?: string;
+    image_url?: string;
+    class_name?: string;
+    section?: string;
+}
 
 const AdminEvents: React.FC = () => {
     const [events, setEvents] = useState<Event[]>([]);
@@ -19,7 +31,7 @@ const AdminEvents: React.FC = () => {
     const [category, setCategory] = useState<string>('Academic');
     const [campusId, setCampusId] = useState<string>('all'); // 'all' or specific campus ID
     const [submitting, setSubmitting] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [time, setTime] = useState('');
     const [location, setLocation] = useState('');
     const [generalInfo, setGeneralInfo] = useState('');
@@ -30,34 +42,53 @@ const AdminEvents: React.FC = () => {
 
     // Modal State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [idToDelete, setIdToDelete] = useState<number | null>(null);
+    const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
-    const [campuses, setCampuses] = useState<{ id: number, name: string }[]>([]);
+    const [campuses, setCampuses] = useState<{ id: string | number, name: string }[]>([]);
 
 
-    const fetchEvents = React.useCallback(async () => {
+    useEffect(() => {
+        const eventsRef = ref(db, 'events');
         setLoading(true);
-        const { data, error } = await supabase
-            .from('events')
-            .select('*')
-            .order('date', { ascending: false });
+        const unsubscribe = onValue(eventsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as Event[];
+                dataArray.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                setEvents(dataArray);
+            } else {
+                setEvents([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching events:', error);
+            setLoading(false);
+        });
 
-        if (data) setEvents(data);
-        if (error) console.error('Error fetching events:', error);
-        setLoading(false);
+        return () => unsubscribe();
     }, []);
 
     useEffect(() => {
         const fetchCampuses = async () => {
-            const { data } = await supabase.from('campuses').select('id, name');
-            if (data) setCampuses(data);
+            try {
+                const snapshot = await get(ref(db, 'campuses'));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                        id: Number(id) || id, // Fallback if campuses are using numeric keys
+                        name: val.name || val
+                    })) as any[];
+                    setCampuses(dataArray);
+                }
+            } catch (error) {
+                console.error(error);
+            }
         };
-        const init = async () => {
-            await fetchEvents();
-            await fetchCampuses();
-        };
-        init();
-    }, [fetchEvents]);
+        fetchCampuses();
+    }, []);
 
     const handleEdit = (ev: Event) => {
         setEditingId(ev.id);
@@ -77,37 +108,39 @@ const AdminEvents: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!title.trim() || !date) {
+            setFormMessage({ type: 'error', text: 'Title and Date are required fields.' });
+            return;
+        }
+        
         setSubmitting(true);
 
         const eventData: any = {
             title,
             date,
             category,
-            campus_id: campusId === 'all' ? null : Number(campusId),
+            campus_id: campusId === 'all' ? null : campusId,
             time,
             location,
             description,
             general_info: generalInfo,
             image_url: imageUrl,
             class_name: className,
-            section: section
+            section: section,
+            created_at: new Date().toISOString()
         };
 
-        let result;
-        if (editingId) {
-            result = await (supabase.from('events') as any)
-                .update(eventData)
-                .eq('id', editingId);
-        } else {
-            result = await (supabase.from('events') as any)
-                .insert([eventData]);
-        }
+        try {
+            if (editingId) {
+                const eventRef = ref(db, `events/${editingId}`);
+                await update(eventRef, eventData);
+            } else {
+                const eventsRef = ref(db, 'events');
+                const newEventRef = push(eventsRef);
+                await set(newEventRef, eventData);
+            }
 
-        const { error } = result;
-
-        if (error) {
-            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} event: ` + error.message });
-        } else {
             setFormMessage({ type: 'success', text: `Event successfully ${editingId ? 'updated' : 'added'}!` });
             setTitle('');
             setDate('');
@@ -121,13 +154,14 @@ const AdminEvents: React.FC = () => {
             setCampusId('all');
             setEditingId(null);
             setShowForm(false);
-            fetchEvents();
             setTimeout(() => setFormMessage(null), 3000);
+        } catch (error: any) {
+            setFormMessage({ type: 'error', text: `Error ${editingId ? 'updating' : 'adding'} event: ` + error.message });
         }
         setSubmitting(false);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         setIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -136,18 +170,11 @@ const AdminEvents: React.FC = () => {
         if (!idToDelete) return;
 
         try {
-            const { error } = await supabase.from('events')
-                .delete()
-                .eq('id', idToDelete);
+            const eventRef = ref(db, `events/${idToDelete}`);
+            await remove(eventRef);
 
-            if (error) {
-                console.error('Delete error:', error);
-                setFormMessage({ type: 'error', text: 'Error deleting event: ' + error.message });
-            } else {
-                fetchEvents();
-                setFormMessage({ type: 'success', text: 'Event deleted successfully.' });
-                setTimeout(() => setFormMessage(null), 3000);
-            }
+            setFormMessage({ type: 'success', text: 'Event deleted successfully.' });
+            setTimeout(() => setFormMessage(null), 3000);
         } catch (err: any) {
             setFormMessage({ type: 'error', text: 'Error deleting event: ' + err.message });
         }

@@ -2,21 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy, Users, ChevronDown, Clock, Calendar, ArrowRight, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { ref, get, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import InfiniteSlider from '../components/ui/InfiniteSlider';
 import CampusFeeStructure from '../components/fees/CampusFeeStructure';
 
-// Helper to convert slug to numeric ID
-const getCampusNumericId = (slug: string | undefined): number | null => {
-    switch (slug?.toLowerCase()) {
-        case 'jinnah': return 1;
-        case 'shebaz': return 2;
-        case 'ghazali': return 3;
-        case 'latif': return 4;
-        case 'sachal': return 5;
-        case 'iqbal': return 6;
-        default: return null;
-    }
+const getCampusNumericId = (slug: string | undefined): string | null => {
+    return slug ? `campus_${slug.toLowerCase()}` : null;
 };
 
 const getThemeColors = (theme: string) => {
@@ -97,47 +89,41 @@ const CampusDashboard: React.FC = () => {
 
             try {
                 if (numericCampusId) {
-                    const { data: cData, error: cError } = await (supabase.from('campuses') as any).select('*').eq('id', numericCampusId).single();
-
-                    console.log("DEBUG: Campus Fetch Attempt", { numericId: numericCampusId, data: cData, error: cError });
-
-                    if (cData && isMounted) {
-                        setCampusDetails(cData);
+                    const snapshot = await get(ref(db, `campuses/${numericCampusId}`));
+                    if (snapshot.exists() && isMounted) {
+                        setCampusDetails(snapshot.val());
                     }
                 }
 
-                // Fetch Scoreboard
-                const { data: scores, error: scoreError } = await (supabase.from('scoreboard') as any)
-                    .select('*')
-                    .eq('campus_id', numericCampusId);
-
-                if (scoreError) console.error("Campus Fetch Error:", scoreError.message);
-                if (isMounted) setScoreboardData(scores || []);
-
-                // Fetch Faculty - Assuming faculty are fetched for all or you can filter by campus if your db supports
-                const { data: faculty, error: facultyError } = await (supabase.from('faculty') as any)
-                    .select('*');
-
-                if (facultyError) console.error("Faculty Fetch Error:", facultyError.message);
-                if (isMounted) setFacultyData(faculty || []);
+                // Fetch Faculty
+                const facultySnapshot = await get(ref(db, 'faculty'));
+                if (facultySnapshot.exists() && isMounted) {
+                    const data = facultySnapshot.val();
+                    const dataArray = Object.keys(data).map(key => ({
+                        id: key,
+                        ...data[key]
+                    }));
+                    setFacultyData(dataArray);
+                }
 
                 // Fetch Events
-                const { data: evts, error: evtsError } = await (supabase.from('events') as any)
-                    .select('*')
-                    .contains('campus_ids', [numericCampusId])
-                    .order('event_date', { ascending: true })
-                    .limit(4);
-
-                if (evtsError) console.error("Events Fetch Error:", evtsError.message);
-                if (isMounted && evts) {
-                    setEvents(evts.map((e: any) => ({
-                        id: e.id?.toString(),
+                const eventsSnapshot = await get(ref(db, 'events'));
+                if (eventsSnapshot.exists() && isMounted) {
+                    const data = eventsSnapshot.val();
+                    const dataArray = Object.keys(data)
+                        .map(key => ({ id: key, ...data[key] }))
+                        .filter(e => {
+                            // Filter by campus
+                            const cId = e.campus_id;
+                            return cId === numericCampusId || cId === 'all' || !cId;
+                        });
+                    dataArray.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                    setEvents(dataArray.slice(0, 4).map(e => ({
+                        id: e.id,
                         title: e.title,
-                        date: e.event_date,
+                        date: e.date,
                         category: e.category
                     })));
-                } else if (isMounted) {
-                    setEvents([]);
                 }
             } catch (err: any) {
                 console.error("Unexpected Fetch Error:", err.message);
@@ -149,33 +135,27 @@ const CampusDashboard: React.FC = () => {
         fetchData();
 
         // Realtime Subscription for scoreboard
-        const channel = supabase
-            .channel(`public:scoreboard:${numericCampusId}`)
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'scoreboard' },
-                (payload) => {
-                    if (payload.eventType === 'INSERT') {
-                        const newRow = payload.new;
-                        if (Number(newRow.campus_id) === numericCampusId) {
-                            setScoreboardData(prev => [...prev, newRow]);
-                        }
-                    } else if (payload.eventType === 'UPDATE') {
-                        const updated = payload.new;
-                        if (Number(updated.campus_id) === numericCampusId) {
-                            setScoreboardData(prev => prev.map(s => s.id === updated.id ? updated : s));
-                        }
-                    } else if (payload.eventType === 'DELETE') {
-                        const oldId = payload.old.id;
-                        setScoreboardData(prev => prev.filter(s => s.id !== oldId));
-                    }
+        const unsubscribeScoreboard = onValue(ref(db, 'scoreboard'), (snapshot: any) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                if (data) {
+                    const dataArray = Object.keys(data).map(key => ({
+                        id: key,
+                        ...data[key]
+                    }));
+                    const filtered = dataArray.filter(s => String(s.campus_id) === String(numericCampusId));
+                    if (isMounted) setScoreboardData(filtered);
+                } else {
+                    if (isMounted) setScoreboardData([]);
                 }
-            )
-            .subscribe();
+            } else {
+                if (isMounted) setScoreboardData([]);
+            }
+        });
 
         return () => {
             isMounted = false;
-            supabase.removeChannel(channel);
+            unsubscribeScoreboard();
         };
     }, [numericCampusId]);
 

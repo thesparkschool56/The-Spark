@@ -37,7 +37,7 @@ const HomePage: React.FC = () => {
       name: 'Neural Health Tracker',
       description: 'A mobile application that tracks cognitive health through daily interactive puzzles and biometrics.',
       jobsRequired: [
-        { id: 'j3', role: 'Fullstack Architect', skills: ['Next.js', 'Node.js', 'Supabase', 'Python'] },
+        { id: 'j3', role: 'Fullstack Architect', skills: ['Next.js', 'Node.js', 'Firebase', 'Python'] },
         { id: 'j4', role: 'UI/UX Designer', skills: ['Figma', 'Prototyping'] }
       ]
     }

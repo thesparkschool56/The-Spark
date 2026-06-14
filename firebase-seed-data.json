@@ -1,0 +1,210 @@
+{
+  "campuses": {
+    "campus_jinnah": {
+      "name": "Jinnah Campus",
+      "slug": "jinnah",
+      "color_theme": "blue"
+    },
+    "campus_shebaz": {
+      "name": "Shebaz Campus",
+      "slug": "shebaz",
+      "color_theme": "green"
+    },
+    "campus_ghazali": {
+      "name": "Ghazali Campus",
+      "slug": "ghazali",
+      "color_theme": "amber"
+    },
+    "campus_latif": {
+      "name": "Latif Campus",
+      "slug": "latif",
+      "color_theme": "red"
+    },
+    "campus_sachal": {
+      "name": "Sachal Campus",
+      "slug": "sachal",
+      "color_theme": "purple"
+    },
+    "campus_iqbal": {
+      "name": "Iqbal Campus",
+      "slug": "iqbal",
+      "color_theme": "indigo"
+    }
+  },
+  "founders": {
+    "founder_1": {
+      "name": "Dr. Allama Muhammad",
+      "role": "Visionary Founder",
+      "quote": "Education is the manifestation of the perfection already in man.",
+      "bio": "A dedicated educationist who laid the foundation of Project Atlas with a vision to provide world-class education accessible to all.",
+      "image_url": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=400"
+    },
+    "founder_2": {
+      "name": "Mrs. Fatima Ali",
+      "role": "Co-Founder & Academic Director",
+      "quote": "Empowering minds today for a brighter tomorrow.",
+      "bio": "With over three decades of experience in curriculum design, she revolutionized the teaching methodology across all our campuses.",
+      "image_url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400"
+    },
+    "founder_3": {
+      "name": "Mr. Tariq Rahman",
+      "role": "Managing Director",
+      "quote": "Building institutions that build character.",
+      "bio": "The operational backbone of the institution, ensuring that every campus operates with maximum efficiency and student safety.",
+      "image_url": "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=400"
+    }
+  },
+  "events": {
+    "event_1": {
+      "title": "Annual Inter-Campus Science Fair",
+      "date": "2026-10-15T09:00:00Z",
+      "category": "Academic",
+      "general_info": "Students from all branches will showcase their innovative projects in robotics, AI, and renewable energy.",
+      "location": "Jinnah Campus Main Auditorium",
+      "image_url": "https://images.unsplash.com/photo-1564325724739-bae0bd08762c?q=80&w=800"
+    },
+    "event_2": {
+      "title": "Winter Sports Gala 2026",
+      "date": "2026-12-05T08:00:00Z",
+      "category": "Sports",
+      "general_info": "The most anticipated sports event of the year featuring athletics, football, and cricket tournaments.",
+      "location": "Latif Campus Sports Complex",
+      "image_url": "https://images.unsplash.com/photo-1526676037777-05a232554f77?q=80&w=800"
+    },
+    "event_3": {
+      "title": "Founders' Day Celebration",
+      "date": "2027-02-20T18:00:00Z",
+      "category": "Ceremony",
+      "general_info": "An evening of cultural performances, alumni speeches, and awards recognizing outstanding student achievements.",
+      "location": "Iqbal Campus Grand Hall",
+      "image_url": "https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=800"
+    },
+    "event_4": {
+      "title": "Tech & Innovation Hackathon",
+      "date": "2026-08-10T10:00:00Z",
+      "category": "Academic",
+      "general_info": "A 24-hour coding challenge for senior section students to solve real-world community problems.",
+      "location": "Shebaz Campus IT Wing",
+      "image_url": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=800"
+    }
+  },
+  "job_positions": {
+    "job_1": {
+      "title": "Senior Physics Instructor",
+      "department": "Sciences",
+      "description": "Seeking an experienced Physics teacher for the A-Levels section. Minimum 5 years of teaching experience required.",
+      "status": "Open",
+      "campus_id": "campus_jinnah"
+    },
+    "job_2": {
+      "title": "Head Basketball Coach",
+      "department": "Physical Education",
+      "description": "Looking for a dynamic coach to train the senior boys and girls teams for the upcoming regional tournaments.",
+      "status": "Open",
+      "campus_id": "campus_latif"
+    },
+    "job_3": {
+      "title": "Student Counselor",
+      "department": "Student Affairs",
+      "description": "Professional counselor needed to provide academic and emotional guidance to middle school students.",
+      "status": "Open",
+      "campus_id": "campus_ghazali"
+    }
+  },
+  "reviews": {
+    "review_1": {
+      "reviewer_name": "Asim Raza",
+      "role": "Parent of Grade 9 Student",
+      "review_text": "The faculty at the Ghazali campus has been phenomenal. My daughter's confidence has grown exponentially since joining.",
+      "is_published": true
+    },
+    "review_2": {
+      "reviewer_name": "Sana Qureshi",
+      "role": "Alumni (Class of 2020)",
+      "review_text": "Project Atlas didn't just teach me academic subjects; it prepared me for the challenges of university life and beyond.",
+      "is_published": true
+    },
+    "review_3": {
+      "reviewer_name": "Dr. Kamran Hussain",
+      "role": "Guest Lecturer",
+      "review_text": "I was thoroughly impressed by the state-of-the-art facilities and the inquisitive nature of the students during my robotics workshop.",
+      "is_published": true
+    },
+    "review_4": {
+      "reviewer_name": "Mina Tariq",
+      "role": "Parent of Primary Student",
+      "review_text": "The secure environment and the dedicated teaching staff give us absolute peace of mind. Highly recommended institution.",
+      "is_published": true
+    }
+  },
+  "faculty": {
+    "faculty_1": {
+      "name": "Dr. Sarah Ahmed",
+      "role": "Head of Science",
+      "section": "Senior",
+      "campus_id": "campus_jinnah",
+      "image_url": "https://ui-avatars.com/api/?name=Dr+Sarah+Ahmed&background=random",
+      "designation": "Professor",
+      "subject": "Physics"
+    }
+  },
+  "scoreboard": {
+    "score_1": {
+      "house_name": "Zest",
+      "points": 150,
+      "campus_id": "campus_jinnah",
+      "section": "Senior"
+    },
+    "score_2": {
+      "house_name": "Sharp",
+      "points": 120,
+      "campus_id": "campus_jinnah",
+      "section": "Senior"
+    }
+  },
+  "fees": {
+    "fee_1": {
+      "campus_id": "campus_jinnah",
+      "section": "Primary",
+      "class_name": "Grade 1",
+      "tuition_fee": 15000,
+      "admission_fee": 25000
+    }
+  },
+  "admissions": {
+    "admission_1": {
+      "student_name": "Ali Khan",
+      "parent_name": "Omar Khan",
+      "email": "omar@example.com",
+      "phone": "03001234567",
+      "grade_applying": "Grade 5",
+      "campus_id": "campus_jinnah",
+      "status": "Pending",
+      "created_at": "2026-06-14T10:00:00Z"
+    }
+  },
+  "messages": {
+    "message_1": {
+      "name": "Ayesha Malik",
+      "email": "ayesha@example.com",
+      "subject": "Admission Query",
+      "message": "When do the admissions for the fall semester open?",
+      "status": "Unread",
+      "created_at": "2026-06-14T09:30:00Z"
+    }
+  },
+  "job_applicants": {
+    "applicant_1": {
+      "job_id": "job_1",
+      "full_name": "Bilal Ahmed",
+      "email": "bilal@example.com",
+      "age": 32,
+      "degree": "MSc Physics",
+      "education": "Karachi University",
+      "department": "Academic",
+      "resume_url": "https://linkedin.com",
+      "status": "Pending",
+      "created_at": "2026-06-14T11:00:00Z"
+    }
+  }
+}

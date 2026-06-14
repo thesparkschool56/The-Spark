@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { ref, get } from 'firebase/database';
+import { db } from '../../lib/firebase';
 import { CreditCard, ChevronRight, Info, Loader2 } from 'lucide-react';
 
 interface FeeRecord {
@@ -11,7 +12,7 @@ interface FeeRecord {
 }
 
 interface Props {
-    campusId: number;
+    campusId: string;
     themeColor?: string;
 }
 
@@ -23,10 +24,11 @@ const CampusFeeStructure: React.FC<Props> = ({ campusId }) => {
 
     useEffect(() => {
         const fetchFees = async () => {
-            const { data, error } = await supabase.from('fees').select('*').eq('campus_id', campusId);
-            
-            if (!error && data) {
-                const feeData = data as FeeRecord[];
+            const snapshot = await get(ref(db, 'fees'));
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                const feeData = dataArray.filter(f => String(f.campus_id) === String(campusId)) as any as FeeRecord[];
                 setFees(feeData);
                 if (feeData.length > 0) {
                     const sections = Array.from(new Set(feeData.map(f => f.section)));

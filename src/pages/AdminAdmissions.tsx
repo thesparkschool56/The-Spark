@@ -1,10 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, update, remove, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { RefreshCw, Check, X, Trash2, Eye, X as CloseIcon } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
-import { Database } from '../lib/database.types';
 
-type Admission = Database['public']['Tables']['admissions']['Row'];
+export interface Admission {
+    id: string;
+    student_name: string;
+    grade?: string | null;
+    dob?: string | null;
+    gender?: string | null;
+    father_name?: string | null;
+    mother_name?: string | null;
+    guardian_name?: string | null;
+    guardian_contact?: string | null;
+    secondary_contact?: string | null;
+    residential_address?: string | null;
+    previous_school?: string | null;
+    previous_grade?: string | null;
+    campus_id?: number | null;
+    status?: string | null;
+    created_at: string;
+}
 
 const AdminAdmissions: React.FC = () => {
     const [admissions, setAdmissions] = useState<Admission[]>([]);
@@ -15,44 +32,48 @@ const AdminAdmissions: React.FC = () => {
     const [idToDelete, setIdToDelete] = useState<string | null>(null);
     const [selectedApplication, setSelectedApplication] = useState<Admission | null>(null);
 
-    const fetchAdmissions = React.useCallback(async () => {
+    useEffect(() => {
         setLoading(true);
         setError(null);
-        try {
-            const { data, error: fetchError } = await supabase.from('admissions')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (fetchError) throw fetchError;
-            setAdmissions(data || []);
-        } catch (err: any) {
-            setError(err.message || "An unexpected error occurred.");
-        } finally {
+        const admissionsRef = ref(db, 'admissions');
+        
+        const unsubscribe = onValue(admissionsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as Admission[];
+                dataArray.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                setAdmissions(dataArray);
+            } else {
+                setAdmissions([]);
+            }
             setLoading(false);
-        }
+        }, (err: any) => {
+            setError(err.message || "An unexpected error occurred.");
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, []);
 
-    useEffect(() => { fetchAdmissions(); }, [fetchAdmissions]);
-
     const updateStatus = async (id: string, newStatus: string) => {
-        const { error } = await (supabase.from('admissions') as any)
-            .update({ status: newStatus })
-            .eq('id', id);
-
-        if (!error) {
-            fetchAdmissions();
-        } else {
-            setError(error.message || 'Failed to update status');
+        try {
+            const applicationRef = ref(db, `admissions/${id}`);
+            await update(applicationRef, { status: newStatus });
+        } catch (err: any) {
+            setError(err.message || 'Failed to update status');
         }
     };
 
     const confirmDelete = async () => {
         if (!idToDelete) return;
-        const { error } = await supabase.from('admissions').delete().eq('id', idToDelete);
-        if (!error) {
-            fetchAdmissions();
-        } else {
-            setError(error.message || 'Failed to delete application');
+        try {
+            const applicationRef = ref(db, `admissions/${idToDelete}`);
+            await remove(applicationRef);
+        } catch (err: any) {
+            setError(err.message || 'Failed to delete application');
         }
         setIsConfirmOpen(false);
         setIdToDelete(null);
@@ -87,9 +108,9 @@ const AdminAdmissions: React.FC = () => {
                     <span className="w-1 h-6 bg-primary rounded-full"></span>
                     Admissions Management
                 </h2>
-                <button onClick={fetchAdmissions} className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1">
-                    <RefreshCw size={16} /> Refresh
-                </button>
+                <div className="text-sm text-primary font-medium flex items-center gap-1">
+                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Live
+                </div>
             </div>
 
             {error && (

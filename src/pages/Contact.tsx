@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import BlurText from '../components/ui/BlurText';
 import ShinyText from '../components/ui/ShinyText';
-import { supabase } from '../lib/supabase';
+import { ref, push, set } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { motion } from 'framer-motion';
 
 const Contact: React.FC = () => {
@@ -21,20 +22,16 @@ const Contact: React.FC = () => {
         setErrorMessage(null);
 
         try {
-            const { error } = await (supabase.from('messages') as any).insert([
-                {
-                    sender_name: formData.name,
-                    email: formData.email,
-                    message_body: formData.message,
-                    subject: 'General Inquiry',
-                    is_read: false
-                }
-            ]);
-
-            if (error) {
-                alert("Error sending message: " + error.message);
-                throw error;
-            }
+            const messagesRef = ref(db, 'messages');
+            const newMessageRef = push(messagesRef);
+            await set(newMessageRef, {
+                sender_name: formData.name,
+                email: formData.email,
+                message_body: formData.message,
+                subject: 'General Inquiry',
+                is_read: false,
+                created_at: new Date().toISOString()
+            });
 
             setStatus('success');
             setFormData({ name: '', email: '', message: '' });

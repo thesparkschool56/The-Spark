@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 
 export interface Faculty {
-  id: number;
+  id: string;
   name: string;
   role: string;
   section: 'Primary' | 'Secondary' | 'Senior' | 'Admin';
@@ -16,21 +17,30 @@ export const useFaculty = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchFaculty = async () => {
+    const facultyRef = ref(db, 'faculty');
+    const unsubscribe = onValue(facultyRef, (snapshot) => {
       try {
-        const { data, error } = await supabase
-          .from('faculty')
-          .select('*');
-
-        if (error) throw error;
-        setFaculty(data || []);
+        const data = snapshot.val();
+        if (data) {
+          const dataArray = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+          })) as Faculty[];
+          setFaculty(dataArray);
+        } else {
+          setFaculty([]);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
-    };
-    fetchFaculty();
+    }, (err) => {
+      setError(err.message);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const groupedFaculty = faculty.reduce((acc, member) => {

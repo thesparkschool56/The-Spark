@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronRight, Loader2, User, Users, BookOpen, MapPin, Phone } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { ref, push, set } from 'firebase/database';
+import { db } from '../lib/firebase';
 
 const Admissions: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(1);
@@ -42,24 +43,28 @@ const Admissions: React.FC = () => {
         setSubmitError(null);
 
         try {
-            const { error } = await (supabase.from('admissions') as any)
-                .insert([{
-                    student_name: formData.studentName,
-                    dob: formData.dob,
-                    gender: formData.gender,
-                    father_name: formData.fatherName,
-                    mother_name: formData.motherName,
-                    guardian_contact: formData.primaryContact,
-                    secondary_contact: formData.secondaryContact,
-                    residential_address: formData.address,
-                    previous_school: formData.previousSchool,
-                    previous_grade: formData.previousGrade,
-                    grade: formData.gradeApplyingFor,
-                    campus_id: formData.campusId ? parseInt(formData.campusId) : null,
-                    status: 'Pending'
-                } as any]);
-
-            if (error) throw error;
+            const admissionsRef = ref(db, 'admissions');
+            const newAdmissionRef = push(admissionsRef);
+            await set(newAdmissionRef, {
+                student_name: formData.studentName,
+                dob: formData.dob,
+                gender: formData.gender,
+                father_name: formData.fatherName,
+                mother_name: formData.motherName,
+                guardian_name: formData.fatherName, // mapped from schema
+                guardian_contact: formData.primaryContact,
+                parent_contact: formData.secondaryContact || formData.primaryContact, // mapped from schema
+                secondary_contact: formData.secondaryContact,
+                residential_address: formData.address,
+                previous_school: formData.previousSchool,
+                previous_grade: formData.previousGrade,
+                grade: formData.gradeApplyingFor,
+                grade_applying: formData.gradeApplyingFor, // mapped from schema
+                campus_id: formData.campusId ? parseInt(formData.campusId) : null,
+                status: 'Pending',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
 
             setCurrentStep(4); // Success step
         } catch (err: any) {

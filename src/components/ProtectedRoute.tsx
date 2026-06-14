@@ -1,38 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 const ProtectedRoute: React.FC = () => {
-    const [loading, setLoading] = useState(true);
-    const [authenticated, setAuthenticated] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
     useEffect(() => {
-        const checkAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setAuthenticated(!!session);
-            setLoading(false);
-        };
-        
-        checkAuth();
-
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setAuthenticated(!!session);
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setIsAuthenticated(!!user);
         });
-
-        return () => subscription.unsubscribe();
+        return () => unsubscribe();
     }, []);
 
-    if (loading) {
+    if (isAuthenticated === null) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">
-                <Loader2 className="animate-spin" size={40} />
+            <div className="min-h-screen flex items-center justify-center bg-stone-50">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
         );
     }
 
-    return authenticated ? <Outlet /> : <Navigate to="/login" replace />;
+    return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;

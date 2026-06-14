@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
-import { supabase } from '../lib/supabase';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Link } from 'react-router-dom';
 
 interface Event {
@@ -19,29 +20,29 @@ const CalendarPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
 
-    const fetchEvents = React.useCallback(async () => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('events')
-                .select('*')
-                .order('date', { ascending: true });
-
-            if (data) setEvents(data);
-            if (error) console.error('Error fetching events:', error);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     useEffect(() => {
-        const init = async () => {
-            await fetchEvents();
-        };
-        init();
-    }, [fetchEvents]);
+        const eventsRef = ref(db, 'events');
+        setLoading(true);
+        const unsubscribe = onValue(eventsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as Event[];
+                dataArray.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                setEvents(dataArray);
+            } else {
+                setEvents([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching events:', error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const categories = [
         { name: 'Exam', color: 'bg-primary' },

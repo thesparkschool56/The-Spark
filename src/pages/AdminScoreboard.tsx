@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, set, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Trophy, Plus, Minus, CheckCircle, ChevronRight, School, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -7,9 +8,9 @@ const SECTIONS = ['Junior', 'Middle', 'Senior', 'College'];
 const HOUSES = ['Zest', 'Sharp', 'Brave', 'Decent', 'Smart'];
 
 const AdminScoreboard: React.FC = () => {
-    const [campuses, setCampuses] = useState<{ id: number; name: string }[]>([]);
+    const [campuses, setCampuses] = useState<{ id: string | number; name: string }[]>([]);
     const [step, setStep] = useState(1);
-    const [selectedCampus, setSelectedCampus] = useState<number | null>(null);
+    const [selectedCampus, setSelectedCampus] = useState<string | number | null>(null);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [selectedHouse, setSelectedHouse] = useState<string | null>(null);
     
@@ -19,73 +20,70 @@ const AdminScoreboard: React.FC = () => {
 
     useEffect(() => {
         const fetchCampuses = async () => {
-            const { data, error } = await supabase.from('campuses').select('id, name');
-            if (error) {
+            try {
+                const snapshot = await get(ref(db, 'campuses'));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const dataArray = Object.keys(data).map(key => ({
+                        id: Number(key) || key,
+                        name: data[key].name || data[key]
+                    })) as any[];
+                    setCampuses(dataArray);
+                }
+            } catch (error: any) {
                 console.error("Scoreboard Campuses Fetch Error:", error);
                 setMessage({ type: 'error', text: 'Failed to load campuses: ' + error.message });
-            } else if (data) {
-                setCampuses(data);
             }
         };
         fetchCampuses();
     }, []);
 
-    const fetchCurrentPoints = async () => {
-        if (!selectedCampus || !selectedSection || !selectedHouse) return;
-        
-        try {
-            const { data, error } = await supabase.from('scoreboard')
-                .select('points')
-                .eq('campus_id', selectedCampus)
-                .eq('section', selectedSection)
-                .eq('house_name', selectedHouse)
-                .single();
-
-            if (error) {
-                if (error.code === 'PGRST116') {
-                    // No record found, default to 0
-                    setPoints(0);
-                } else {
-                    console.error("Scoreboard Points Fetch Error:", error);
-                    setMessage({ type: 'error', text: 'Error fetching points: ' + error.message });
-                }
-            } else if (data) {
-                setPoints((data as any).points);
-            }
-        } catch (err: any) {
-            console.error("Scoreboard Unexpected Error:", err);
-            setMessage({ type: 'error', text: 'An unexpected error occurred.' });
-        }
-    };
-
     useEffect(() => {
-        if (step === 3 && selectedHouse) {
-            fetchCurrentPoints();
+        let unsubscribe: (() => void) | undefined;
+        
+        if (step === 3 && selectedCampus && selectedSection && selectedHouse) {
+            const id = `${selectedCampus}_${selectedSection}_${selectedHouse}`;
+            const pointsRef = ref(db, `scoreboard/${id}`);
+            
+            unsubscribe = onValue(pointsRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    setPoints(data?.points || 0);
+                } else {
+                    setPoints(0);
+                }
+            }, (err) => {
+                console.error("Scoreboard Points Fetch Error:", err);
+                setMessage({ type: 'error', text: 'An unexpected error occurred.' });
+            });
         }
-    }, [step, selectedHouse]);
+        
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [step, selectedCampus, selectedSection, selectedHouse]);
 
     const handleUpdatePoints = async (amount: number) => {
         if (!selectedCampus || !selectedSection || !selectedHouse) return;
         
         setIsUpdating(true);
+        const id = `${selectedCampus}_${selectedSection}_${selectedHouse}`;
         const newPoints = points + amount;
 
-        const { error } = await (supabase.from('scoreboard') as any)
-            .upsert({
+        try {
+            const pointsRef = ref(db, `scoreboard/${id}`);
+            await set(pointsRef, {
+                id,
                 campus_id: selectedCampus,
                 section: selectedSection,
                 house_name: selectedHouse,
                 points: newPoints
-            }, {
-                onConflict: 'campus_id,section,house_name'
             });
-
-        if (error) {
-            setMessage({ type: 'error', text: 'Failed to update points: ' + error.message });
-        } else {
-            setPoints(newPoints);
+            
             setMessage({ type: 'success', text: `Points updated! ${selectedHouse} now has ${newPoints}.` });
             setTimeout(() => setMessage(null), 3000);
+        } catch (error: any) {
+            setMessage({ type: 'error', text: 'Failed to update points: ' + error.message });
         }
         setIsUpdating(false);
     };

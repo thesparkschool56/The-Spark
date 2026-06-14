@@ -1,16 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { ref, get, set, push, update, remove, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
 import { Plus, Trash2, Briefcase, RefreshCw, Users, FileText, Download, Check, X } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
-import { Database } from '../lib/database.types';
+export interface JobPosition {
+    id: string;
+    title: string;
+    description: string;
+    department: string;
+    campus_id?: string | number | null;
+    status: string;
+    created_at: string;
+}
 
-type JobPosition = Database['public']['Tables']['job_positions']['Row'];
-type Applicant = Database['public']['Tables']['job_applicants']['Row'] & {
-    job_positions: {
+export interface Applicant {
+    id: string;
+    job_id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    resume_url: string;
+    status: string;
+    created_at: string;
+    job_positions?: {
         title: string;
     } | null;
-};
+}
 
 const AdminVacancies: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'jobs' | 'applicants'>('jobs');
@@ -31,87 +47,105 @@ const AdminVacancies: React.FC = () => {
     const [description, setDescription] = useState('');
     const [status, setStatus] = useState('Open');
     const [campusId, setCampusId] = useState('');
-    const [campuses, setCampuses] = useState<{ id: number; name: string }[]>([]);
+    const [campuses, setCampuses] = useState<{ id: string | number; name: string }[]>([]);
 
     // Modal State for Deletion
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [jobToDelete, setJobToDelete] = useState<number | null>(null);
-
-    const fetchJobs = async () => {
-        setLoadingJobs(true);
-        try {
-            const { data, error } = await supabase
-                .from('job_positions')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            if (data) setJobs(data);
-        } catch (err) {
-            console.error('Failed to load vacant positions', err);
-        } finally {
-            setLoadingJobs(false);
-        }
-    };
-
-    const fetchApplicants = async () => {
-        setLoadingApplicants(true);
-        try {
-            const { data, error } = await supabase
-                .from('job_applicants')
-                .select('*, job_positions(title)')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            if (data) setApplicants(data as Applicant[]); // Properly typed join result
-        } catch (err) {
-            console.error('Failed to load applicants', err);
-        } finally {
-            setLoadingApplicants(false);
-        }
-    };
-
-    const fetchCampuses = async () => {
-        try {
-            const { data } = await supabase.from('campuses').select('id, name');
-            if (data) setCampuses(data);
-        } catch (err) {
-            console.error('Failed to load campuses', err);
-        }
-    };
+    const [jobToDelete, setJobToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        if (activeTab === 'jobs') {
-            fetchJobs();
-            fetchCampuses();
-        } else {
-            fetchApplicants();
-        }
-    }, [activeTab]);
+        let currentJobsMap: Record<string, any> = {};
+        let currentApplicantsRaw: Record<string, any> = {};
+
+        const updateApplicants = () => {
+             const dataArray = Object.entries(currentApplicantsRaw).map(([key, app]: [string, any]) => {
+                    const jobTitle = currentJobsMap[app.job_id] ? currentJobsMap[app.job_id].title : 'Unknown Position';
+                    return {
+                        id: key,
+                        ...app,
+                        job_positions: { title: jobTitle }
+                    };
+                }) as Applicant[];
+                dataArray.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+                setApplicants(dataArray);
+                setLoadingApplicants(false);
+        };
+
+        const unsubJobs = onValue(ref(db, 'job_positions'), (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                currentJobsMap = data;
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as JobPosition[];
+                dataArray.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+                setJobs(dataArray);
+            } else {
+                currentJobsMap = {};
+                setJobs([]);
+            }
+            setLoadingJobs(false);
+            updateApplicants();
+        });
+
+        const unsubApplicants = onValue(ref(db, 'job_applicants'), (snapshot) => {
+            if (snapshot.exists()) {
+                currentApplicantsRaw = snapshot.val();
+            } else {
+                currentApplicantsRaw = {};
+            }
+            updateApplicants();
+        });
+
+        const unsubCampuses = onValue(ref(db, 'campuses'), (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id: Number(id) || id,
+                    name: val.name || val
+                }));
+                setCampuses(dataArray);
+            } else {
+                setCampuses([]);
+            }
+        });
+
+        return () => {
+            unsubJobs();
+            unsubApplicants();
+            unsubCampuses();
+        };
+    }, []);
 
     const handleCreateJob = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSubmittingJob(true);
         
+        if (!jobTitle.trim() || !department.trim()) {
+            setActionMessage({ type: 'error', text: 'Title and Department are required fields.' });
+            return;
+        }
+        
+        setIsSubmittingJob(true);
         try {
             const newJob = {
                 title: jobTitle,
                 description,
                 department,
                 status: status,
-                campus_id: campusId ? Number(campusId) : null
+                campus_id: campusId ? campusId : null,
+                created_at: new Date().toISOString()
             };
 
-            const { error } = await (supabase.from('job_positions') as any).insert([newJob]);
-            
-            if (error) throw error;
+            const jobsRef = ref(db, 'job_positions');
+            const newJobRef = push(jobsRef);
+            await set(newJobRef, newJob);
             
             // Reset form
             setJobTitle('');
             setDescription('');
             setCampusId('');
             setActionMessage({ type: 'success', text: 'Job posted successfully!' });
-            fetchJobs();
             setTimeout(() => setActionMessage(null), 3000);
             
         } catch (error: any) {
@@ -122,7 +156,7 @@ const AdminVacancies: React.FC = () => {
         }
     };
 
-    const handleDeleteJob = async (id: number) => {
+    const handleDeleteJob = async (id: string) => {
         setJobToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -131,9 +165,8 @@ const AdminVacancies: React.FC = () => {
         if (!jobToDelete) return;
         
         try {
-            const { error } = await supabase.from('job_positions').delete().eq('id', jobToDelete);
-            if (error) throw error;
-            fetchJobs();
+            const jobRef = ref(db, `job_positions/${jobToDelete}`);
+            await remove(jobRef);
             setActionMessage({ type: 'success', text: 'Job deleted successfully.' });
             setTimeout(() => setActionMessage(null), 3000);
         } catch (error: any) {
@@ -145,15 +178,11 @@ const AdminVacancies: React.FC = () => {
         }
     };
 
-    const toggleJobStatus = async (id: number, currentStatus: string | null) => {
+    const toggleJobStatus = async (id: string, currentStatus: string | null) => {
         const nextStatus = currentStatus === 'Open' ? 'Closed' : 'Open';
         try {
-            const { error } = await (supabase.from('job_positions') as any)
-                .update({ status: nextStatus })
-                .eq('id', id);
-            
-            if (error) throw error;
-            fetchJobs();
+            const jobRef = ref(db, `job_positions/${id}`);
+            await update(jobRef, { status: nextStatus });
         } catch (error: any) {
             console.error('Error updating job status:', error);
             setActionMessage({ type: 'error', text: 'Failed to update job status: ' + (error.message || 'Unknown error') });
@@ -162,20 +191,16 @@ const AdminVacancies: React.FC = () => {
 
     const updateApplicantStatus = async (id: string, newStatus: string) => {
         try {
-            const { error } = await (supabase.from('job_applicants') as any)
-                .update({ status: newStatus })
-                .eq('id', id);
-            
-            if (error) throw error;
-            fetchApplicants();
+            const appRef = ref(db, `job_applicants/${id}`);
+            await update(appRef, { status: newStatus });
         } catch (error: any) {
             console.error('Error updating applicant status:', error);
             setActionMessage({ type: 'error', text: 'Failed to update status: ' + (error.message || 'Unknown error') });
         }
     };
 
-    const getCampusName = (id: number | null) => {
-        const campus = campuses.find(c => c.id === id);
+    const getCampusName = (id: string | number | null) => {
+        const campus = campuses.find(c => String(c.id) === String(id));
         return campus ? campus.name : 'All Campuses';
     };
 

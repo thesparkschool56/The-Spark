@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -16,20 +17,10 @@ const Login: React.FC = () => {
         setError(null);
 
         try {
-            const { error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (authError) {
-                setError(authError.message);
-            } else {
-                // Supabase handles the session automatically in the client
-                navigate('/admin');
-            }
-        } catch (err: unknown) {
-            const error = err as Error;
-            setError(error.message || 'An unexpected error occurred. Please try again.');
+            await signInWithEmailAndPassword(auth, email, password);
+            navigate('/admin');
+        } catch (err: any) {
+            setError(err.message || 'An unexpected error occurred. Please try again.');
         } finally {
             setLoading(false);
         }
