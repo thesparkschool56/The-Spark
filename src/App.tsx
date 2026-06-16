@@ -26,6 +26,8 @@ const AdminFounders = lazy(() => import('./pages/AdminFounders'));
 const Vacancies = lazy(() => import('./pages/Vacancies'));
 const AdminVacancies = lazy(() => import('./pages/AdminVacancies'));
 const AdminScoreboard = lazy(() => import('./pages/AdminScoreboard'));
+const AdminCampuses = lazy(() => import('./pages/AdminCampuses'));
+const AdminFees = lazy(() => import('./pages/AdminFees'));
 
 const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
@@ -104,6 +106,8 @@ function App() {
               <Route path="founders" element={<AdminFounders />} />
               <Route path="messages" element={<AdminMessages />} />
               <Route path="vacancies" element={<AdminVacancies />} />
+              <Route path="campuses" element={<AdminCampuses />} />
+              <Route path="fees" element={<AdminFees />} />
             </Route>
           </Route>
         </Routes>

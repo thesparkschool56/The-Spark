@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Users, Calendar, MessageSquare, LogOut, GraduationCap, Contact, Mail, Briefcase, Trophy } from 'lucide-react';
+import { Users, Calendar, MessageSquare, LogOut, GraduationCap, Contact, Mail, Briefcase, Trophy, MapPin, DollarSign } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -25,6 +25,8 @@ const AdminLayout: React.FC = () => {
         { icon: <MessageSquare size={20} />, label: 'Reviews', path: '/admin/reviews' },
         { icon: <Users size={20} />, label: 'Founders', path: '/admin/founders' },
         { icon: <Mail size={20} />, label: 'Messages', path: '/admin/messages' },
+        { icon: <MapPin size={20} />, label: 'Campuses', path: '/admin/campuses' },
+        { icon: <DollarSign size={20} />, label: 'Fees', path: '/admin/fees' },
         { icon: <Briefcase size={20} />, label: 'Vacancies', path: '/admin/vacancies' },
     ];
 
