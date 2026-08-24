@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "campuses": { ".read": true, ".write": true },
+    "events": { ".read": true, ".write": true },
+    "faculty": { ".read": true, ".write": true },
+    "founders": { ".read": true, ".write": true },
+    "job_positions": { ".read": true, ".write": true },
+    "reviews": { ".read": true, ".write": true },
+    "scoreboard": { ".read": true, ".write": true },
+    "scoreboard_hierarchy": { ".read": true, ".write": true },
+    "fees": { ".read": true, ".write": true },
+
+    "admissions": {
+      ".read": true,
+      ".write": true
+    },
+    "messages": {
+      ".read": true,
+      ".write": true
+    },
+    "job_applicants": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

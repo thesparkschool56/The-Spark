@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, Loader2, Send, X, CheckCircle2 } from 'lucide-react';
-import { ref, get, push, set, onValue } from 'firebase/database';
+import { ref, push, set, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
  
 interface JobPosition {

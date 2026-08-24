@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ref, get, onValue } from 'firebase/database';
+import { ref, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
 import ShinyText from '../components/ui/ShinyText';
 import { User } from 'lucide-react';

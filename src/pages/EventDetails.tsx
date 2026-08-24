@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ArrowLeft, Loader2, Info, School } from 'lucide-react';
-import { ref, get } from 'firebase/database';
+import { ref, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
 
 const EventDetails: React.FC = () => {

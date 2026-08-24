@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ref, get, update, remove, onValue } from 'firebase/database';
+import { ref, update, remove, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { RefreshCw, Check, X, Trash2, Eye, X as CloseIcon } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
@@ -18,7 +18,7 @@ export interface Admission {
     residential_address?: string | null;
     previous_school?: string | null;
     previous_grade?: string | null;
-    campus_id?: number | null;
+    campus_id?: string | number | null;
     status?: string | null;
     created_at: string;
 }
@@ -79,7 +79,7 @@ const AdminAdmissions: React.FC = () => {
         setIdToDelete(null);
     };
 
-    const getStatusColor = (status: string | null) => {
+    const getStatusColor = (status?: string | null) => {
         if (!status) return 'bg-stone-100 text-stone-700';
         switch (status) {
             case 'Pending': return 'bg-amber-100 text-amber-700';
@@ -89,16 +89,15 @@ const AdminAdmissions: React.FC = () => {
         }
     };
 
-    const getCampusName = (id: number | null) => {
-        switch (id) {
-            case 1: return 'Jinnah';
-            case 2: return 'Shebaz';
-            case 3: return 'Ghazali';
-            case 4: return 'Latif';
-            case 5: return 'Sachal';
-            case 6: return 'Iqbal';
-            default: return 'N/A';
-        }
+    const getCampusName = (id?: string | number | null) => {
+        const strId = String(id || '');
+        if (strId.includes('jinnah') || strId === '1') return 'Jinnah';
+        if (strId.includes('shebaz') || strId === '2') return 'Shebaz';
+        if (strId.includes('ghazali') || strId === '3') return 'Ghazali';
+        if (strId.includes('latif') || strId === '4') return 'Latif';
+        if (strId.includes('sachal') || strId === '5') return 'Sachal';
+        if (strId.includes('iqbal') || strId === '6') return 'Iqbal';
+        return strId || 'N/A';
     };
 
     return (

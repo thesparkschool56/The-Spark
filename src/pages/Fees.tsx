@@ -1,41 +1,52 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, ShieldCheck, Phone, Mail } from 'lucide-react';
+import { Check, ShieldCheck, Phone, Mail, Loader2 } from 'lucide-react';
 import ShinyText from '../components/ui/ShinyText';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../lib/firebase';
+
+interface DynamicFeeRecord {
+    id: string;
+    section: string;
+    class_name: string;
+    tuition_fee: number;
+    admission_fee: number;
+    annual_charges?: number;
+}
+
+const defaultFeeStructure = [
+    { category: 'Playgroup - Class 2', admission: '25,000', tuition: '8,500', annual: '12,000' },
+    { category: 'Class 3 - Class 5', admission: '25,000', tuition: '9,500', annual: '12,000' },
+    { category: 'Class 6 - Class 8', admission: '30,000', tuition: '10,500', annual: '15,000' },
+    { category: 'Metric (9-10)', admission: '35,000', tuition: '12,500', annual: '15,000' },
+    { category: 'Inter / A-Levels', admission: '45,000', tuition: '18,500', annual: '20,000' }
+];
 
 const Fees: React.FC = () => {
-    const feeStructure = [
-        {
-            category: 'Playgroup - Class 2',
-            admission: '25,000',
-            tuition: '8,500',
-            annual: '12,000'
-        },
-        {
-            category: 'Class 3 - Class 5',
-            admission: '25,000',
-            tuition: '9,500',
-            annual: '12,000'
-        },
-        {
-            category: 'Class 6 - Class 8',
-            admission: '30,000',
-            tuition: '10,500',
-            annual: '15,000'
-        },
-        {
-            category: 'Metric (9-10)',
-            admission: '35,000',
-            tuition: '12,500',
-            annual: '15,000'
-        },
-        {
-            category: 'Inter / A-Levels',
-            admission: '45,000',
-            tuition: '18,500',
-            annual: '20,000'
-        }
-    ];
+    const [liveFees, setLiveFees] = useState<DynamicFeeRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const feesRef = ref(db, 'fees');
+        const unsubscribe = onValue(feesRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const dataArray = Object.entries(data).map(([id, val]: [string, any]) => ({
+                    id,
+                    ...val
+                })) as DynamicFeeRecord[];
+                setLiveFees(dataArray);
+            } else {
+                setLiveFees([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching fees for public page:', error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     return (
         <div className="pt-20 min-h-screen bg-stone-50">
@@ -75,14 +86,42 @@ const Fees: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {feeStructure.map((tier, index) => (
-                                    <tr key={index} className="hover:bg-stone-50/50 transition-colors">
-                                        <td className="p-6 font-bold text-stone-800">{tier.category}</td>
-                                        <td className="p-6 text-stone-600 font-medium">{tier.admission}</td>
-                                        <td className="p-6 text-primary font-bold text-lg">{tier.tuition}</td>
-                                        <td className="p-6 text-stone-600 font-medium">{tier.annual}</td>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={4} className="p-8 text-center text-stone-400">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Loader2 className="animate-spin text-primary" size={20} />
+                                                <span>Loading Fee Structure...</span>
+                                            </div>
+                                        </td>
                                     </tr>
-                                ))}
+                                ) : liveFees.length > 0 ? (
+                                    liveFees.map((fee) => (
+                                        <tr key={fee.id} className="hover:bg-stone-50/50 transition-colors">
+                                            <td className="p-6 font-bold text-stone-800">
+                                                {fee.class_name} <span className="text-xs font-normal text-stone-400 block">{fee.section}</span>
+                                            </td>
+                                            <td className="p-6 text-stone-600 font-medium">
+                                                Rs. {fee.admission_fee.toLocaleString()}
+                                            </td>
+                                            <td className="p-6 text-primary font-bold text-lg">
+                                                Rs. {fee.tuition_fee.toLocaleString()}
+                                            </td>
+                                            <td className="p-6 text-stone-600 font-medium">
+                                                {fee.annual_charges ? `Rs. ${fee.annual_charges.toLocaleString()}` : 'Included'}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    defaultFeeStructure.map((tier, index) => (
+                                        <tr key={index} className="hover:bg-stone-50/50 transition-colors">
+                                            <td className="p-6 font-bold text-stone-800">{tier.category}</td>
+                                            <td className="p-6 text-stone-600 font-medium">{tier.admission}</td>
+                                            <td className="p-6 text-primary font-bold text-lg">{tier.tuition}</td>
+                                            <td className="p-6 text-stone-600 font-medium">{tier.annual}</td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

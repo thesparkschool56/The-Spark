@@ -18,6 +18,23 @@ const Contact: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const trimmedName = formData.name.trim();
+        const trimmedEmail = formData.email.trim();
+        const trimmedMessage = formData.message.trim();
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+            setStatus('error');
+            setErrorMessage('Please provide a valid email address.');
+            return;
+        }
+
+        if (!trimmedName || !trimmedMessage) {
+            setStatus('error');
+            setErrorMessage('Please fill out all required fields.');
+            return;
+        }
+
         setStatus('submitting');
         setErrorMessage(null);
 
@@ -25,9 +42,9 @@ const Contact: React.FC = () => {
             const messagesRef = ref(db, 'messages');
             const newMessageRef = push(messagesRef);
             await set(newMessageRef, {
-                sender_name: formData.name,
-                email: formData.email,
-                message_body: formData.message,
+                sender_name: trimmedName,
+                email: trimmedEmail,
+                message_body: trimmedMessage,
                 subject: 'General Inquiry',
                 is_read: false,
                 created_at: new Date().toISOString()
@@ -39,11 +56,9 @@ const Contact: React.FC = () => {
             console.error('Error submitting form:', error);
             setStatus('error');
             setErrorMessage(error.message || 'Something went wrong. Please try again later.');
-            setTimeout(() => setStatus('idle'), 5000);
         } finally {
-            if (status !== 'error') setStatus('success');
             setTimeout(() => {
-                if (status === 'success') setStatus('idle');
+                setStatus((prev) => (prev === 'success' || prev === 'error' ? 'idle' : prev));
             }, 5000);
         }
     };

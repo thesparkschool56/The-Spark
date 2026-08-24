@@ -39,6 +39,14 @@ const Admissions: React.FC = () => {
     };
 
     const handleSubmit = async () => {
+        const studentName = formData.studentName.trim();
+        const primaryContact = formData.primaryContact.trim();
+
+        if (!studentName || !primaryContact || !formData.gradeApplyingFor) {
+            setSubmitError('Please complete all required fields (Student Name, Primary Contact, Grade).');
+            return;
+        }
+
         setIsSubmitting(true);
         setSubmitError(null);
 
@@ -46,18 +54,18 @@ const Admissions: React.FC = () => {
             const admissionsRef = ref(db, 'admissions');
             const newAdmissionRef = push(admissionsRef);
             await set(newAdmissionRef, {
-                student_name: formData.studentName,
+                student_name: studentName,
                 dob: formData.dob,
                 gender: formData.gender,
-                father_name: formData.fatherName,
-                mother_name: formData.motherName,
-                guardian_name: formData.fatherName, // mapped from schema
-                guardian_contact: formData.primaryContact,
-                parent_contact: formData.secondaryContact || formData.primaryContact, // mapped from schema
-                secondary_contact: formData.secondaryContact,
-                residential_address: formData.address,
-                previous_school: formData.previousSchool,
-                previous_grade: formData.previousGrade,
+                father_name: formData.fatherName.trim(),
+                mother_name: formData.motherName.trim(),
+                guardian_name: formData.fatherName.trim(), // mapped from schema
+                guardian_contact: primaryContact,
+                parent_contact: formData.secondaryContact.trim() || primaryContact, // mapped from schema
+                secondary_contact: formData.secondaryContact.trim(),
+                residential_address: formData.address.trim(),
+                previous_school: formData.previousSchool.trim(),
+                previous_grade: formData.previousGrade.trim(),
                 grade: formData.gradeApplyingFor,
                 grade_applying: formData.gradeApplyingFor, // mapped from schema
                 campus_id: formData.campusId ? parseInt(formData.campusId) : null,

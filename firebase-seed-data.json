@@ -162,6 +162,53 @@
       "section": "Senior"
     }
   },
+  "scoreboard_hierarchy": {
+    "campuses": {
+      "campus_jinnah": {
+        "Junior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Middle": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Senior": { "Brave": 0, "Decent": 0, "Sharp": 120, "Smart": 0, "Zest": 150 },
+        "College": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 }
+      },
+      "campus_shebaz": {
+        "Junior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Middle": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Senior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "College": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 }
+      },
+      "campus_ghazali": {
+        "Junior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Middle": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Senior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "College": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 }
+      },
+      "campus_latif": {
+        "Junior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Middle": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Senior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "College": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 }
+      },
+      "campus_sachal": {
+        "Junior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Middle": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Senior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "College": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 }
+      },
+      "campus_iqbal": {
+        "Junior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Middle": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "Senior": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 },
+        "College": { "Brave": 0, "Decent": 0, "Sharp": 0, "Smart": 0, "Zest": 0 }
+      }
+    },
+    "house_totals": {
+      "Brave": 0,
+      "Decent": 0,
+      "Sharp": 120,
+      "Smart": 0,
+      "Zest": 150
+    }
+  },
   "fees": {
     "fee_1": {
       "campus_id": "campus_jinnah",

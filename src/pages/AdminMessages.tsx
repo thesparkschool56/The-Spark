@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ref, get, update, remove, onValue } from 'firebase/database';
+import { ref, update, remove, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { Trash2, Mail, CheckCircle, Clock } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';

@@ -10,7 +10,7 @@ import {
     Briefcase
 } from 'lucide-react';
 
-import { ref, get, onValue } from 'firebase/database';
+import { ref, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
 import SplitText from '../components/ui/SplitText';
 import ShinyText from '../components/ui/ShinyText';

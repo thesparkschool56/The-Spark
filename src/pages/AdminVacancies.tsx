@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ref, get, set, push, update, remove, onValue } from 'firebase/database';
+import { ref, set, push, update, remove, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { Plus, Trash2, Briefcase, RefreshCw, Users, FileText, Download, Check, X } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
@@ -199,7 +199,7 @@ const AdminVacancies: React.FC = () => {
         }
     };
 
-    const getCampusName = (id: string | number | null) => {
+    const getCampusName = (id?: string | number | null) => {
         const campus = campuses.find(c => String(c.id) === String(id));
         return campus ? campus.name : 'All Campuses';
     };

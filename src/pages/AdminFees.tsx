@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ref, update, remove, onValue, set, push, get } from 'firebase/database';
 import { db } from '../lib/firebase';
-import { Plus, Trash2, Edit2, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
 export interface FeeRecord {

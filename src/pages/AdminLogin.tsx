@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Loader2, ShieldCheck } from 'lucide-react';
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 const AdminLogin: React.FC = () => {
@@ -27,7 +27,18 @@ const AdminLogin: React.FC = () => {
             await signInWithEmailAndPassword(auth, email, password);
             navigate('/admin');
         } catch (err: any) {
-            setError(err.message || 'An unexpected error occurred.');
+            // If user doesn't exist yet, attempt to create initial admin account
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    navigate('/admin');
+                    return;
+                } catch (createErr: any) {
+                    setError(createErr.message || 'Authentication failed. Please check credentials.');
+                }
+            } else {
+                setError(err.message || 'An unexpected error occurred.');
+            }
         } finally {
             setLoading(false);
         }
